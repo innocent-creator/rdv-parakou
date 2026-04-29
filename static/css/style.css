@@ -7,7 +7,7 @@
    Exemple : background-image: url('/static/images/monimage.jpg');
 */
 body {
-  background-image: url('/static/images/background.jpg');
+  background-image: url('/static/images/background.png');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;

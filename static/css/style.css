@@ -14,7 +14,8 @@ body {
 }
 
 #authModal.show,
-#patientAuthModal.show {
+#patientAuthModal.show,
+#editProfileModal.show {
   display: flex;
 }
 

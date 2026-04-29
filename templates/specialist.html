@@ -29,6 +29,7 @@
     <div class="flex gap-2 mb-8 bg-white/80 backdrop-blur rounded-xl p-1 shadow-sm border border-slate-100 w-fit">
       <button id="tab_slots" class="px-5 py-2 rounded-lg font-medium text-sm tab-active" onclick="showTab('slots')">Mes créneaux</button>
       <button id="tab_appointments" class="px-5 py-2 rounded-lg font-medium text-sm" onclick="showTab('appointments')">Rendez-vous</button>
+      <button id="tab_profile" class="px-5 py-2 rounded-lg font-medium text-sm" onclick="showTab('profile')">Mon profil</button>
     </div>
 
     <!-- Section Créneaux -->
@@ -59,9 +60,77 @@
       <h2 class="font-bold text-lg">Rendez-vous patients</h2>
       <div id="appointmentsList" class="space-y-4"></div>
     </div>
+
+    <!-- Section Mon profil -->
+    <div id="section_profile" class="hidden">
+      <div class="bg-white/90 backdrop-blur rounded-2xl shadow-sm border border-slate-100 p-6 space-y-6">
+        <h2 class="font-bold text-lg">Mon profil</h2>
+
+        <!-- Message de succès -->
+        <div id="profileSuccess"
+          class="hidden flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
+          <span>✓</span>
+          <span>Profil mis à jour avec succès !</span>
+        </div>
+
+        <!-- Chargement -->
+        <div id="profileLoading" class="text-slate-400 text-sm">Chargement du profil…</div>
+
+        <!-- Contenu du profil (masqué pendant le chargement) -->
+        <div id="profileContent" class="hidden space-y-6">
+
+          <!-- Photo + identité -->
+          <div class="flex items-center gap-6">
+            <div class="relative">
+              <div id="profileAvatarWrap">
+                <div class="w-24 h-24 rounded-full bg-gradient-to-br from-sky-500 to-emerald-500 text-white flex items-center justify-center text-3xl font-bold select-none"></div>
+              </div>
+            </div>
+            <div>
+              <div class="font-bold text-lg text-slate-800" id="profileFullName"></div>
+              <div class="text-sky-600 font-medium" id="profileSpecialty"></div>
+              <div class="text-sm text-slate-500" id="profileClinic"></div>
+            </div>
+          </div>
+
+          <!-- Formulaire -->
+          <form id="profileForm" class="space-y-5">
+            <!-- Photo -->
+            <div>
+              <label class="text-sm font-medium text-slate-700 block mb-2">Photo de profil</label>
+              <div class="flex items-center gap-4">
+                <div id="profilePhotoThumb" class="w-16 h-16 rounded-full overflow-hidden bg-slate-100 flex-shrink-0"></div>
+                <div class="flex-1">
+                  <label for="profilePhotoInput"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm font-medium text-slate-700 cursor-pointer">
+                    📷 Changer la photo
+                  </label>
+                  <input type="file" name="photo" id="profilePhotoInput" accept=".jpg,.jpeg,.png" class="hidden" />
+                  <p id="profilePhotoError" class="hidden mt-1 text-xs text-rose-600"></p>
+                  <p class="mt-1 text-xs text-slate-400">JPG ou PNG · max 2 Mo</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bio -->
+            <div>
+              <label for="profileBio" class="text-sm font-medium text-slate-700 block mb-2">Ma biographie</label>
+              <textarea id="profileBio" name="bio" rows="6"
+                class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 outline-none resize-none text-sm"
+                placeholder="Décrivez votre parcours, vos spécialités, votre expérience…"></textarea>
+            </div>
+
+            <button type="submit" id="profileSaveBtn"
+              class="w-full py-3 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700 transition-colors">
+              Enregistrer les modifications
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <script src="{% static 'js/common.js' %}"></script>
-  <script src="{% static 'js/specialist.js' %}"></script>
+  <script src="{% static 'js/common.js' %}?v=4"></script>
+  <script src="{% static 'js/specialist.js' %}?v=4"></script>
 </body>
 </html>

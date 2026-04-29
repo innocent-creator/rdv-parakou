@@ -2,18 +2,16 @@
 
 (function () {
   const user = getUser();
-  if (user) {
-    if (user.role === 'specialist') { window.location.href = '/specialist'; return; }
-    if (user.role === 'admin') { window.location.href = '/admin-panel'; return; }
-    document.getElementById('navUser').style.display = 'flex';
-    document.getElementById('userName').textContent = user.full_name;
-  } else {
-    document.getElementById('navGuest').style.display = 'flex';
-  }
+  if (!user) return;
+  if (user.role === 'specialist') window.location.href = '/specialist';
+  else if (user.role === 'admin') window.location.href = '/admin-panel';
 })();
 
 let selectedSlot = null;
 let availableSlots = [];
+let specialistsData = [];
+
+const BIO_LIMIT = 180;
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
 
@@ -74,9 +72,6 @@ document.getElementById('patientLoginForm').addEventListener('submit', async e =
     setToken(data.token);
     setUser(data.user);
     closePatientAuth();
-    document.getElementById('navGuest').style.display = 'none';
-    document.getElementById('navUser').style.display = 'flex';
-    document.getElementById('userName').textContent = data.user.full_name;
     showToast('Connecté avec succès !');
   } catch (err) { showAuthError(err.message); }
 });
@@ -98,23 +93,37 @@ document.getElementById('patientRegisterForm').addEventListener('submit', async 
     setToken(data.token);
     setUser(data.user);
     closePatientAuth();
-    document.getElementById('navGuest').style.display = 'none';
-    document.getElementById('navUser').style.display = 'flex';
-    document.getElementById('userName').textContent = data.user.full_name;
     showToast('Compte créé avec succès !');
   } catch (err) { showAuthError(err.message); }
 });
 
 // ── BOOKING FLOW ──────────────────────────────────────────────────────────────
 
-async function loadVillages() {
+async function loadCommunes() {
   try {
-    const villages = await apiFetch('/villages');
-    const sel = document.getElementById('selVillage');
-    sel.innerHTML = '<option value="">-- Choisir un village --</option>' +
-      villages.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
-  } catch (e) { showToast('Erreur chargement villages', 'error'); }
+    const list = await apiFetch('/communes');
+    const sel = document.getElementById('selCommune');
+    sel.innerHTML = '<option value="">-- Choisir une commune --</option>' +
+      list.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  } catch (e) { showToast('Erreur chargement communes', 'error'); }
 }
+
+document.getElementById('selCommune').addEventListener('change', async e => {
+  const id = e.target.value;
+  const selVillage = document.getElementById('selVillage');
+  selVillage.innerHTML = '<option value="">-- Choisir d\'abord une commune --</option>';
+  selVillage.disabled = true;
+  document.getElementById('selClinic').innerHTML = '<option value="">-- Choisir d\'abord un village --</option>';
+  document.getElementById('selSpecialist').innerHTML = '<option value="">-- Choisir d\'abord une clinique --</option>';
+  resetSlots();
+  if (!id) return;
+  try {
+    const villages = await apiFetch(`/communes/${id}/villages`);
+    selVillage.innerHTML = '<option value="">-- Choisir un village --</option>' +
+      villages.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+    selVillage.disabled = false;
+  } catch (e) { showToast('Erreur chargement villages', 'error'); }
+});
 
 document.getElementById('selVillage').addEventListener('change', async e => {
   const id = e.target.value;
@@ -133,20 +142,66 @@ document.getElementById('selVillage').addEventListener('change', async e => {
 document.getElementById('selClinic').addEventListener('change', async e => {
   const id = e.target.value;
   document.getElementById('selSpecialist').innerHTML = '<option value="">-- Choisir --</option>';
+  specialistsData = [];
   resetSlots();
   if (!id) return;
   try {
-    const specialists = await apiFetch(`/clinics/${id}/specialists`);
+    specialistsData = await apiFetch(`/clinics/${id}/specialists`);
     document.getElementById('selSpecialist').innerHTML =
       '<option value="">-- Choisir un spécialiste --</option>' +
-      specialists.map(s => `<option value="${s.id}">${s.full_name} (${s.specialty}) — ${s.free_slots} créneau(x)</option>`).join('');
+      specialistsData.map(s => `<option value="${s.id}">${s.full_name} (${s.specialty}) — ${s.free_slots} créneau(x)</option>`).join('');
   } catch (e) { showToast('Erreur chargement spécialistes', 'error'); }
 });
+
+function showSpecialistBio(sp) {
+  const parts = sp.full_name.trim().split(/\s+/);
+  const initials = (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+  const avatarEl = document.getElementById('bioAvatar');
+  if (sp.photo_url) {
+    avatarEl.style.backgroundImage = `url('${sp.photo_url}')`;
+    avatarEl.style.backgroundSize = 'cover';
+    avatarEl.style.backgroundPosition = 'center';
+    avatarEl.textContent = '';
+  } else {
+    avatarEl.style.backgroundImage = '';
+    avatarEl.textContent = initials;
+  }
+  document.getElementById('bioName').textContent = sp.full_name;
+  document.getElementById('bioSpecialty').textContent = sp.specialty;
+
+  const bioText = document.getElementById('bioText');
+  const bioToggle = document.getElementById('bioToggle');
+  const bio = (sp.bio || '').trim();
+
+  if (!bio) {
+    bioText.textContent = 'Aucune biographie disponible pour ce spécialiste.';
+    bioText.className = 'text-sm text-slate-400 italic leading-relaxed';
+    bioToggle.classList.add('hidden');
+  } else if (bio.length > BIO_LIMIT) {
+    bioText.textContent = bio.slice(0, BIO_LIMIT) + '…';
+    bioText.className = 'text-sm text-slate-600 leading-relaxed';
+    bioToggle.textContent = 'Voir plus';
+    bioToggle.classList.remove('hidden');
+    bioToggle.onclick = () => {
+      const collapsed = bioToggle.textContent === 'Voir plus';
+      bioText.textContent = collapsed ? bio : bio.slice(0, BIO_LIMIT) + '…';
+      bioToggle.textContent = collapsed ? 'Voir moins' : 'Voir plus';
+    };
+  } else {
+    bioText.textContent = bio;
+    bioText.className = 'text-sm text-slate-600 leading-relaxed';
+    bioToggle.classList.add('hidden');
+  }
+
+  document.getElementById('specialistBio').classList.remove('hidden');
+}
 
 document.getElementById('selSpecialist').addEventListener('change', async e => {
   const id = e.target.value;
   resetSlots();
   if (!id) return;
+  const sp = specialistsData.find(s => String(s.id) === id);
+  if (sp) showSpecialistBio(sp);
   try {
     const slots = await apiFetch(`/specialists/${id}/slots`);
     availableSlots = slots.filter(s => s.status === 'available');
@@ -173,6 +228,7 @@ document.getElementById('selSpecialist').addEventListener('change', async e => {
 function resetSlots() {
   selectedSlot = null;
   availableSlots = [];
+  document.getElementById('specialistBio').classList.add('hidden');
   document.getElementById('availableSlotsInfo').classList.add('hidden');
   document.getElementById('dateTimeSection').classList.add('hidden');
   document.getElementById('bookForm').classList.add('hidden');
@@ -242,8 +298,14 @@ document.getElementById('formBook').addEventListener('submit', async e => {
       showToast('Veuillez indiquer votre nom', 'error');
       return;
     }
+    const email = (fd.get('patient_email') || '').trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('Veuillez indiquer une adresse email valide', 'error');
+      return;
+    }
     body.patient_name = name;
     body.patient_phone = (fd.get('patient_phone') || '').trim() || undefined;
+    body.patient_email = email;
   }
 
   try {
@@ -297,4 +359,4 @@ async function cancelApt(id) {
   } catch (err) { showToast(err.message, 'error'); }
 }
 
-loadVillages();
+loadCommunes();

@@ -8,6 +8,8 @@ urlpatterns = [
     path('auth/me', views.auth_me),
 
     # Public
+    path('communes', views.communes),
+    path('communes/<int:pk>/villages', views.commune_villages),
     path('villages', views.villages),
     path('villages/<int:pk>/clinics', views.village_clinics),
     path('clinics/<int:pk>/specialists', views.clinic_specialists),
@@ -31,5 +33,6 @@ urlpatterns = [
     path('admin/patients', views.admin_patients),
     path('admin/specialists', views.admin_specialists),
     path('admin/users/<int:pk>', views.admin_delete_user),
+    path('admin/specialists/<int:pk>/profile', views.admin_update_specialist),
     path('admin/clinics', views.admin_clinics),
 ]

@@ -4,12 +4,13 @@ if (!user || user.role !== 'specialist') window.location.href = '/';
 document.getElementById('userName').textContent = user.full_name;
 
 function showTab(tab) {
-  ['slots', 'appointments'].forEach(t => {
+  ['slots', 'appointments', 'profile'].forEach(t => {
     document.getElementById(`tab_${t}`).classList.toggle('tab-active', t === tab);
     document.getElementById(`section_${t}`).classList.toggle('hidden', t !== tab);
   });
   if (tab === 'slots') loadSlots();
-  else loadAppointments();
+  else if (tab === 'appointments') loadAppointments();
+  else loadProfileTab();
 }
 
 async function loadProfile() {
@@ -18,6 +19,92 @@ async function loadProfile() {
     document.getElementById('profileInfo').textContent = `${p.specialty} — ${p.clinic_name}, ${p.village_name}`;
   } catch (e) {}
 }
+
+function _initials(fullName) {
+  const parts = fullName.trim().split(/\s+/);
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+}
+
+function _bigAvatar(photoUrl, initials) {
+  if (photoUrl) return `<img src="${photoUrl}" class="w-24 h-24 rounded-full object-cover" alt="Photo" />`;
+  return `<div class="w-24 h-24 rounded-full bg-gradient-to-br from-sky-500 to-emerald-500 text-white flex items-center justify-center text-3xl font-bold select-none">${initials}</div>`;
+}
+
+function _smallAvatar(photoUrl, initials) {
+  if (photoUrl) return `<img src="${photoUrl}" class="w-16 h-16 rounded-full object-cover" alt="Photo" />`;
+  return `<div class="w-16 h-16 rounded-full bg-gradient-to-br from-sky-500 to-emerald-500 text-white flex items-center justify-center text-xl font-bold select-none">${initials}</div>`;
+}
+
+async function loadProfileTab() {
+  document.getElementById('profileLoading').classList.remove('hidden');
+  document.getElementById('profileContent').classList.add('hidden');
+  document.getElementById('profileSuccess').classList.add('hidden');
+
+  try {
+    const p = await apiFetch('/specialist/me');
+    const initials = _initials(p.full_name);
+
+    document.getElementById('profileFullName').textContent = p.full_name;
+    document.getElementById('profileSpecialty').textContent = p.specialty;
+    document.getElementById('profileClinic').textContent = `${p.clinic_name} — ${p.village_name}`;
+    document.getElementById('profileBio').value = p.bio || '';
+
+    document.getElementById('profileAvatarWrap').innerHTML = _bigAvatar(p.photo_url, initials);
+    document.getElementById('profilePhotoThumb').innerHTML = _smallAvatar(p.photo_url, initials);
+
+    document.getElementById('profileLoading').classList.add('hidden');
+    document.getElementById('profileContent').classList.remove('hidden');
+  } catch (e) {
+    document.getElementById('profileLoading').textContent = 'Erreur lors du chargement du profil.';
+  }
+}
+
+document.getElementById('profilePhotoInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  const errEl = document.getElementById('profilePhotoError');
+  errEl.classList.add('hidden');
+
+  if (!file) return;
+
+  if (file.size > 2 * 1024 * 1024) {
+    errEl.textContent = 'La photo ne doit pas dépasser 2 Mo.';
+    errEl.classList.remove('hidden');
+    e.target.value = '';
+    return;
+  }
+
+  const thumb = document.getElementById('profilePhotoThumb');
+  const url = URL.createObjectURL(file);
+  thumb.innerHTML = `<img src="${url}" class="w-16 h-16 rounded-full object-cover" alt="Aperçu" />`;
+});
+
+document.getElementById('profileForm').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  const btn = document.getElementById('profileSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Enregistrement…';
+  document.getElementById('profileSuccess').classList.add('hidden');
+
+  const fd = new FormData(e.target);
+
+  try {
+    const updated = await apiFetchMultipart('/specialist/me', { method: 'PATCH', body: fd });
+    document.getElementById('profileSuccess').classList.remove('hidden');
+    document.getElementById('profilePhotoInput').value = '';
+
+    const initials = _initials(document.getElementById('profileFullName').textContent);
+    document.getElementById('profileAvatarWrap').innerHTML = _bigAvatar(updated.photo_url, initials);
+    document.getElementById('profilePhotoThumb').innerHTML = _smallAvatar(updated.photo_url, initials);
+
+    loadProfile();
+  } catch (err) {
+    showToast(err.message || 'Erreur lors de la sauvegarde', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enregistrer les modifications';
+  }
+});
 
 async function loadSlots() {
   const container = document.getElementById('slotsList');

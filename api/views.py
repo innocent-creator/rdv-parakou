@@ -1,11 +1,19 @@
+import logging
+import re
+import threading
 from datetime import date
+from django.core.mail import send_mail
 from django.db import transaction, IntegrityError
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import AccessToken
 
-from .models import User, Village, Clinic, Specialist, AvailabilitySlot, Appointment
+logger = logging.getLogger(__name__)
+
+_EMAIL_RE = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+
+from .models import User, Commune, Village, Clinic, Specialist, AvailabilitySlot, Appointment
 
 
 def _token(user):
@@ -28,6 +36,12 @@ def _slot_dict(s):
         'end_time': str(s.end_time),
         'status': s.status,
     }
+
+
+def _photo_url(request, sp):
+    if sp.photo:
+        return request.build_absolute_uri(sp.photo.url)
+    return None
 
 
 # ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -76,6 +90,20 @@ def auth_me(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def communes(request):
+    data = list(Commune.objects.order_by('name').values('id', 'name'))
+    return JsonResponse(data, safe=False)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def commune_villages(request, pk):
+    data = list(Village.objects.filter(commune_id=pk).order_by('name').values('id', 'name'))
+    return JsonResponse(data, safe=False)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def villages(request):
     data = list(Village.objects.order_by('name').values('id', 'name'))
     return JsonResponse(data, safe=False)
@@ -103,6 +131,7 @@ def clinic_specialists(request, pk):
             'id': s.id, 'specialty': s.specialty, 'bio': s.bio,
             'full_name': s.user.full_name, 'email': s.user.email,
             'free_slots': free,
+            'photo_url': _photo_url(request, s),
         })
     return JsonResponse(result, safe=False)
 
@@ -135,8 +164,12 @@ def appointments_create(request):
 
     patient_name = (d.get('patient_name') or '').strip() or None
     patient_phone = (d.get('patient_phone') or '').strip() or None
-    if not user and not patient_name:
-        return JsonResponse({'error': 'Veuillez indiquer votre nom'}, status=400)
+    patient_email = (d.get('patient_email') or '').strip() or None
+    if not user:
+        if not patient_name:
+            return JsonResponse({'error': 'Veuillez indiquer votre nom'}, status=400)
+        if not patient_email or not _EMAIL_RE.match(patient_email):
+            return JsonResponse({'error': 'Veuillez indiquer une adresse email valide'}, status=400)
 
     try:
         slot = AvailabilitySlot.objects.get(id=slot_id)
@@ -151,6 +184,7 @@ def appointments_create(request):
             patient=user,
             patient_name=None if user else patient_name,
             patient_phone=None if user else patient_phone,
+            patient_email=None if user else patient_email,
             specialist=slot.specialist, slot=slot,
             reason=reason, consultation_type=ctype, status='pending',
         )
@@ -198,6 +232,46 @@ def appointment_cancel(request, pk):
     return JsonResponse({'ok': True})
 
 
+# ── EMAIL ─────────────────────────────────────────────────────────────────────
+
+def _send_confirmation_email(apt):
+    recipient = apt.get_patient_email()
+    if not recipient:
+        return
+
+    patient_name = apt.get_patient_name()
+    slot_date = apt.slot.slot_date.strftime('%d/%m/%Y')
+    start_time = apt.slot.start_time.strftime('%H:%M')
+    end_time = apt.slot.end_time.strftime('%H:%M')
+    specialist_name = apt.specialist.user.full_name
+    specialty = apt.specialist.specialty
+    clinic_name = apt.specialist.clinic.name
+    village_name = apt.specialist.clinic.village.name
+
+    subject = '✅ Votre rendez-vous est confirmé - RDV Parakou'
+    body = (
+        f'Bonjour {patient_name},\n\n'
+        f'Votre rendez-vous a été confirmé par votre spécialiste.\n\n'
+        f'📅 Date : {slot_date}\n'
+        f'🕐 Heure : {start_time} – {end_time}\n'
+        f'👨‍⚕️ Spécialiste : {specialist_name} ({specialty})\n'
+        f'🏥 Clinique : {clinic_name}\n'
+        f'📍 Village : {village_name}\n\n'
+        f'Merci de vous présenter à l\'heure.\n'
+        f'— L\'équipe RDV Parakou'
+    )
+
+    try:
+        send_mail(subject, body, None, [recipient], fail_silently=False)
+    except Exception as exc:
+        logger.error('Échec envoi email confirmation apt#%s à %s : %s', apt.id, recipient, exc)
+
+
+def _send_confirmation_email_async(apt):
+    t = threading.Thread(target=_send_confirmation_email, args=(apt,), daemon=True)
+    t.start()
+
+
 # ── SPECIALIST ────────────────────────────────────────────────────────────────
 
 def _get_specialist(user, res):
@@ -208,7 +282,7 @@ def _get_specialist(user, res):
         return None
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH'])
 def specialist_profile(request):
     if request.user.role != 'specialist':
         return JsonResponse({'error': 'Accès refusé'}, status=403)
@@ -216,10 +290,19 @@ def specialist_profile(request):
         sp = Specialist.objects.select_related('user', 'clinic__village').get(user=request.user)
     except Specialist.DoesNotExist:
         return JsonResponse({'error': 'Profil introuvable'}, status=404)
+
+    if request.method == 'PATCH':
+        bio = request.data.get('bio', sp.bio)
+        sp.bio = (bio or '').strip() or None
+        if 'photo' in request.FILES:
+            sp.photo = request.FILES['photo']
+        sp.save()
+
     return JsonResponse({
         'id': sp.id, 'specialty': sp.specialty, 'bio': sp.bio,
         'full_name': sp.user.full_name, 'email': sp.user.email,
         'clinic_name': sp.clinic.name, 'village_name': sp.clinic.village.name,
+        'photo_url': _photo_url(request, sp),
     })
 
 
@@ -303,7 +386,11 @@ def specialist_appointment_confirm(request, pk):
         return JsonResponse({'error': 'Accès refusé'}, status=403)
     try:
         sp = Specialist.objects.get(user=request.user)
-        apt = Appointment.objects.get(id=pk, specialist=sp)
+        apt = (
+            Appointment.objects
+            .select_related('patient', 'slot', 'specialist__user', 'specialist__clinic__village')
+            .get(id=pk, specialist=sp)
+        )
     except (Specialist.DoesNotExist, Appointment.DoesNotExist):
         return JsonResponse({'error': 'Rendez-vous introuvable'}, status=404)
     if apt.status != 'pending':
@@ -313,6 +400,7 @@ def specialist_appointment_confirm(request, pk):
         apt.save()
         apt.slot.status = 'booked'
         apt.slot.save()
+    _send_confirmation_email_async(apt)
     return JsonResponse({'ok': True})
 
 
@@ -374,6 +462,7 @@ def admin_specialists(request):
             'id': s.id, 'user_id': s.user.id, 'full_name': s.user.full_name,
             'email': s.user.email, 'phone': s.user.phone, 'specialty': s.specialty,
             'clinic_name': s.clinic.name, 'village_name': s.clinic.village.name,
+            'bio': s.bio, 'photo_url': _photo_url(request, s),
         } for s in Specialist.objects.select_related('user', 'clinic__village').order_by('user__full_name')]
         return JsonResponse(data, safe=False)
 
@@ -413,6 +502,22 @@ def admin_delete_user(request, pk):
         return JsonResponse({'error': 'Impossible'}, status=400)
     user.delete()
     return JsonResponse({'ok': True})
+
+
+@api_view(['PATCH'])
+def admin_update_specialist(request, pk):
+    if request.user.role != 'admin':
+        return JsonResponse({'error': 'Accès refusé'}, status=403)
+    try:
+        sp = Specialist.objects.get(id=pk)
+    except Specialist.DoesNotExist:
+        return JsonResponse({'error': 'Spécialiste introuvable'}, status=404)
+    bio = request.data.get('bio', sp.bio)
+    sp.bio = (bio or '').strip() or None
+    if 'photo' in request.FILES:
+        sp.photo = request.FILES['photo']
+    sp.save()
+    return JsonResponse({'ok': True, 'photo_url': _photo_url(request, sp)})
 
 
 @api_view(['GET'])

@@ -15,6 +15,16 @@ async function apiFetch(path, options = {}) {
   return data;
 }
 
+async function apiFetchMultipart(path, options = {}) {
+  const token = getToken();
+  const headers = { ...(options.headers || {}) };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch('/api' + path, { ...options, headers });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw { status: res.status, message: data.error || 'Erreur serveur' };
+  return data;
+}
+
 function showToast(msg, type = 'success') {
   const t = document.createElement('div');
   t.className = 'toast' + (type === 'error' ? ' error' : type === 'success' ? ' success' : '');

@@ -39,8 +39,19 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.full_name
 
 
+class Commune(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Village(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    commune = models.ForeignKey(
+        Commune, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='villages'
+    )
 
     def __str__(self):
         return self.name
@@ -61,6 +72,7 @@ class Specialist(models.Model):
     clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='specialists')
     specialty = models.CharField(max_length=100)
     bio = models.TextField(blank=True, null=True)
+    photo = models.ImageField(upload_to='specialists/photos/', blank=True, null=True)
 
     def __str__(self):
         return f"{self.user.full_name} — {self.specialty}"
@@ -91,6 +103,7 @@ class Appointment(models.Model):
     patient = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='appointments', null=True, blank=True)
     patient_name = models.CharField(max_length=200, blank=True, null=True)
     patient_phone = models.CharField(max_length=50, blank=True, null=True)
+    patient_email = models.EmailField(max_length=200, blank=True, null=True)
     specialist = models.ForeignKey(Specialist, on_delete=models.CASCADE, related_name='appointments')
     slot = models.ForeignKey(AvailabilitySlot, on_delete=models.CASCADE, related_name='appointments')
     reason = models.TextField()
@@ -105,7 +118,7 @@ class Appointment(models.Model):
         return (self.patient.phone if self.patient else self.patient_phone) or ''
 
     def get_patient_email(self):
-        return self.patient.email if self.patient else ''
+        return self.patient.email if self.patient else self.patient_email or ''
 
     def __str__(self):
         name = self.get_patient_name()

@@ -1,0 +1,139 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RDV Parakou — Administration</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+<body class="min-h-screen text-slate-800">
+  <nav class="bg-white/80 backdrop-blur sticky top-0 z-40 border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-bold text-lg">
+        <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-emerald-500 grid place-items-center text-white">❤️</span>
+        <span>RDV <span class="text-sky-600">Parakou</span></span>
+      </a>
+      <div class="flex items-center gap-3">
+        <span class="text-sm text-slate-600">Admin : <strong id="userName"></strong></span>
+        <button onclick="logout()" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100">Déconnexion</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-6xl mx-auto px-6 py-10 space-y-8">
+    <!-- Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
+        <div class="text-3xl font-extrabold text-sky-600" id="statPatients">—</div>
+        <div class="text-sm text-slate-500 mt-1">Patients</div>
+      </div>
+      <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
+        <div class="text-3xl font-extrabold text-emerald-600" id="statSpecialists">—</div>
+        <div class="text-sm text-slate-500 mt-1">Spécialistes</div>
+      </div>
+      <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
+        <div class="text-3xl font-extrabold text-slate-700" id="statTotal">—</div>
+        <div class="text-sm text-slate-500 mt-1">Total RDV</div>
+      </div>
+      <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
+        <div class="text-3xl font-extrabold text-amber-500" id="statPending">—</div>
+        <div class="text-sm text-slate-500 mt-1">En attente</div>
+      </div>
+      <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
+        <div class="text-3xl font-extrabold text-emerald-600" id="statConfirmed">—</div>
+        <div class="text-sm text-slate-500 mt-1">Confirmés</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 bg-white/80 backdrop-blur rounded-xl p-1 shadow-sm border border-slate-100 w-fit">
+      <button id="tab_patients" class="px-5 py-2 rounded-lg font-medium text-sm tab-active" onclick="showTab('patients')">Patients</button>
+      <button id="tab_specialists" class="px-5 py-2 rounded-lg font-medium text-sm" onclick="showTab('specialists')">Spécialistes</button>
+      <button id="tab_clinics" class="px-5 py-2 rounded-lg font-medium text-sm" onclick="showTab('clinics')">Cliniques</button>
+    </div>
+
+    <!-- Patients -->
+    <div id="section_patients">
+      <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 font-bold">Liste des patients</div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+              <tr>
+                <th class="py-2 px-3 text-left">Nom</th>
+                <th class="py-2 px-3 text-left">Email</th>
+                <th class="py-2 px-3 text-left">Téléphone</th>
+                <th class="py-2 px-3"></th>
+              </tr>
+            </thead>
+            <tbody id="patientsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spécialistes -->
+    <div id="section_specialists" class="hidden space-y-6">
+      <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 font-bold">Liste des spécialistes</div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+              <tr>
+                <th class="py-2 px-3 text-left">Nom</th>
+                <th class="py-2 px-3 text-left">Spécialité</th>
+                <th class="py-2 px-3 text-left">Clinique</th>
+                <th class="py-2 px-3 text-left">Village</th>
+                <th class="py-2 px-3"></th>
+              </tr>
+            </thead>
+            <tbody id="specialistsBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-sm p-6">
+        <h3 class="font-bold mb-4">Ajouter un spécialiste</h3>
+        <form id="addSpecialistForm" class="grid md:grid-cols-2 gap-4">
+          <div><label class="text-sm font-medium">Nom complet</label><input name="full_name" required class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-400" /></div>
+          <div><label class="text-sm font-medium">Email</label><input name="email" type="email" required class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-400" /></div>
+          <div><label class="text-sm font-medium">Téléphone</label><input name="phone" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-400" /></div>
+          <div><label class="text-sm font-medium">Mot de passe</label><input name="password" type="password" required class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-400" /></div>
+          <div><label class="text-sm font-medium">Spécialité</label><input name="specialty" required class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-400" /></div>
+          <div><label class="text-sm font-medium">Clinique</label>
+            <select name="clinic_id" id="spClinic" required class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+              <option value="">-- Choisir --</option>
+            </select>
+          </div>
+          <div class="md:col-span-2"><label class="text-sm font-medium">Bio (optionnel)</label><textarea name="bio" rows="2" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-400 resize-none"></textarea></div>
+          <div class="md:col-span-2"><button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700">Ajouter le spécialiste</button></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Cliniques -->
+    <div id="section_clinics" class="hidden">
+      <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 font-bold">Liste des cliniques</div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+              <tr>
+                <th class="py-2 px-3 text-left">Nom</th>
+                <th class="py-2 px-3 text-left">Village</th>
+                <th class="py-2 px-3 text-left">Adresse</th>
+                <th class="py-2 px-3 text-left">Téléphone</th>
+              </tr>
+            </thead>
+            <tbody id="clinicsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{% static 'js/common.js' %}"></script>
+  <script src="{% static 'js/admin.js' %}"></script>
+</body>
+</html>

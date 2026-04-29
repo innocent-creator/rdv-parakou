@@ -1,0 +1,125 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RDV Parakou — Espace Patient</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+
+<body class="min-h-screen text-slate-800">
+  <nav class="bg-white/80 backdrop-blur sticky top-0 z-40 border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-bold text-lg">
+        <span
+          class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-emerald-500 grid place-items-center text-white">❤️</span>
+        <span>RDV <span class="text-sky-600">Parakou</span></span>
+      </a>
+      <div class="flex items-center gap-3">
+        <span class="text-sm text-slate-600">Bonjour, <strong id="userName"></strong></span>
+        <button onclick="logout()"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100">Déconnexion</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-4xl mx-auto px-6 py-10 ">
+    <div class="flex gap-2 mb-8 bg-white/80 backdrop-blur rounded-xl p-1 shadow-sm border border-slate-100 w-fit">
+      <button id="tabBook" class="px-5 py-2 rounded-lg font-medium text-sm tab-active" onclick="showTab('book')">Prendre
+        un RDV</button>
+      <button id="tabMine" class="px-5 py-2 rounded-lg font-medium text-sm " onclick="showTab('mine')">Mes
+        rendez-vous</button>
+    </div>
+
+    <!-- Section Prendre RDV -->
+    <div id="sectionBook">
+      <div class="bg-white/90 backdrop-blur rounded-2xl shadow-sm border border-slate-100 p-6 space-y-5">
+        <h2 class="font-bold text-lg">Prendre un rendez-vous</h2>
+        <div>
+          <label class="text-sm font-medium text-slate-700">Village</label>
+          <select id="selVillage"
+            class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none bg-white">
+            <option value="">-- Choisir un village --</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-slate-700">Clinique</label>
+          <select id="selClinic"
+            class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none bg-white">
+            <option value="">-- Choisir d'abord un village --</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-slate-700">Spécialiste</label>
+          <select id="selSpecialist"
+            class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none bg-white">
+            <option value="">-- Choisir d'abord une clinique --</option>
+          </select>
+        </div>
+        <!-- Créneaux disponibles (affichage lecture seule) -->
+        <div id="availableSlotsInfo" class="hidden">
+          <label class="text-sm font-medium text-slate-700 block mb-2">Créneaux disponibles chez ce spécialiste</label>
+          <div id="availableSlotsList" class="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200"></div>
+        </div>
+
+        <!-- Saisie date + heure par le patient -->
+        <div id="dateTimeSection" class="hidden">
+          <label class="text-sm font-medium text-slate-700 block mb-3">Entrez votre date et heure souhaitées</label>
+          <div class="flex flex-wrap gap-3 items-end">
+            <div>
+              <label class="text-xs text-slate-500 block mb-1">Date</label>
+              <input type="date" id="inputDate" class="px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-500 block mb-1">Heure</label>
+              <input type="time" id="inputTime" class="px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" />
+            </div>
+            <button id="btnVerify" type="button" class="px-5 py-2.5 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700">
+              Vérifier la disponibilité
+            </button>
+          </div>
+          <div id="verifyMessage" class="hidden mt-3 text-sm px-3 py-2 rounded-lg"></div>
+        </div>
+
+        <div id="bookForm" class="hidden border-t border-slate-100 pt-5 space-y-4">
+          <div class="text-sm text-sky-700 font-medium">Créneau sélectionné : <span id="slotInfo"></span></div>
+          <form id="formBook" class="space-y-4">
+            <div>
+              <label class="text-sm font-medium">Motif de consultation</label>
+              <textarea name="reason" required rows="2"
+                class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none resize-none"></textarea>
+            </div>
+            <div>
+              <label class="text-sm font-medium">Type de consultation</label>
+              <select name="consultation_type" required
+                class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none bg-white">
+                <option value="">-- Choisir --</option>
+                <option value="Présentiel">Présentiel</option>
+                <option value="Téléconsultation">Téléconsultation</option>
+              </select>
+            </div>
+            <button type="submit"
+              class="w-full py-2.5 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700">Confirmer la
+              demande</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section Mes RDV -->
+    <div id="sectionMine" class="hidden space-y-4">
+      <h2 class="font-bold  text-white">Mes rendez-vous</h2>
+      <div id="myAppointments" class="space-y-4">
+        <p class="text-slate-500">Chargement...</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="{% static 'js/common.js' %}"></script>
+  <script src="{% static 'js/patient.js' %}"></script>
+</body>
+
+</html>

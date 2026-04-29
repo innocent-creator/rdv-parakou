@@ -1,0 +1,67 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RDV Parakou — Espace Spécialiste</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+<body class="min-h-screen text-slate-800">
+  <nav class="bg-white/80 backdrop-blur sticky top-0 z-40 border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-bold text-lg">
+        <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-emerald-500 grid place-items-center text-white">❤️</span>
+        <span>RDV <span class="text-sky-600">Parakou</span></span>
+      </a>
+      <div class="flex items-center gap-3">
+        <div class="text-right">
+          <div class="text-sm font-semibold" id="userName"></div>
+          <div class="text-xs text-slate-500" id="profileInfo"></div>
+        </div>
+        <button onclick="logout()" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100">Déconnexion</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-4xl mx-auto px-6 py-10">
+    <div class="flex gap-2 mb-8 bg-white/80 backdrop-blur rounded-xl p-1 shadow-sm border border-slate-100 w-fit">
+      <button id="tab_slots" class="px-5 py-2 rounded-lg font-medium text-sm tab-active" onclick="showTab('slots')">Mes créneaux</button>
+      <button id="tab_appointments" class="px-5 py-2 rounded-lg font-medium text-sm" onclick="showTab('appointments')">Rendez-vous</button>
+    </div>
+
+    <!-- Section Créneaux -->
+    <div id="section_slots" class="space-y-6">
+      <div class="bg-white/90 backdrop-blur rounded-2xl shadow-sm border border-slate-100 p-6">
+        <h2 class="font-bold text-lg mb-4">Ajouter un créneau</h2>
+        <form id="addSlotForm" class="flex flex-wrap gap-3 items-end">
+          <div>
+            <label class="text-sm font-medium text-slate-700">Date</label>
+            <input type="date" name="slot_date" required class="mt-1 block px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" />
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Début</label>
+            <input type="time" name="start_time" required class="mt-1 block px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" />
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Fin</label>
+            <input type="time" name="end_time" required class="mt-1 block px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" />
+          </div>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700">Ajouter</button>
+        </form>
+      </div>
+      <div class="space-y-3" id="slotsList"></div>
+    </div>
+
+    <!-- Section Rendez-vous -->
+    <div id="section_appointments" class="hidden space-y-4">
+      <h2 class="font-bold text-lg">Rendez-vous patients</h2>
+      <div id="appointmentsList" class="space-y-4"></div>
+    </div>
+  </div>
+
+  <script src="{% static 'js/common.js' %}"></script>
+  <script src="{% static 'js/specialist.js' %}"></script>
+</body>
+</html>

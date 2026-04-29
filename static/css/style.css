@@ -1,0 +1,107 @@
+* {
+  font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* === FOND D'ÉCRAN ===
+   Place ton image dans static/images/ puis indique son nom ici.
+   Exemple : background-image: url('/static/images/monimage.jpg');
+*/
+body {
+  background-image: url('/static/images/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+#authModal.show {
+  display: flex;
+}
+
+.tab-active {
+  background: #0ea5e9;
+  color: white;
+}
+
+.card-hover {
+  transition: all 0.25s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -8px rgba(2, 132, 199, 0.25);
+  border-color: #7dd3fc;
+}
+
+.slot-btn {
+  transition: all 0.15s ease;
+}
+
+.slot-btn.selected {
+  background: #0ea5e9 !important;
+  color: white !important;
+  border-color: #0ea5e9 !important;
+}
+
+.pill-available {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.pill-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.pill-booked {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.pill-confirmed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.pill-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.pill-cancelled {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.toast {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 100;
+  padding: 0.875rem 1.25rem;
+  border-radius: 0.75rem;
+  background: white;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #0ea5e9;
+  animation: slideIn 0.3s ease;
+  max-width: 380px;
+}
+
+.toast.error {
+  border-left-color: #e11d48;
+}
+
+.toast.success {
+  border-left-color: #10b981;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

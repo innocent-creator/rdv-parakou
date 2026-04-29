@@ -1,18 +1,111 @@
-const user = getUser();
-if (!user || user.role !== 'patient') window.location.href = '/';
+// ── AUTH STATE ────────────────────────────────────────────────────────────────
 
-document.getElementById('userName').textContent = user.full_name;
+(function () {
+  const user = getUser();
+  if (user) {
+    if (user.role === 'specialist') { window.location.href = '/specialist'; return; }
+    if (user.role === 'admin') { window.location.href = '/admin-panel'; return; }
+    document.getElementById('navUser').style.display = 'flex';
+    document.getElementById('userName').textContent = user.full_name;
+  } else {
+    document.getElementById('navGuest').style.display = 'flex';
+  }
+})();
 
 let selectedSlot = null;
 let availableSlots = [];
 
+// ── TABS ──────────────────────────────────────────────────────────────────────
+
 function showTab(tab) {
+  if (tab === 'mine' && !getUser()) {
+    openPatientAuth('login');
+    return;
+  }
   document.getElementById('tabBook').classList.toggle('tab-active', tab === 'book');
   document.getElementById('tabMine').classList.toggle('tab-active', tab === 'mine');
   document.getElementById('sectionBook').classList.toggle('hidden', tab !== 'book');
   document.getElementById('sectionMine').classList.toggle('hidden', tab !== 'mine');
   if (tab === 'mine') loadMyAppointments();
 }
+
+// ── AUTH MODAL ────────────────────────────────────────────────────────────────
+
+function openPatientAuth(tab) {
+  document.getElementById('patientAuthModal').classList.add('show');
+  switchPatientTab(tab);
+}
+
+function closePatientAuth() {
+  document.getElementById('patientAuthModal').classList.remove('show');
+  document.getElementById('patientAuthError').classList.add('hidden');
+}
+
+function switchPatientTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('patientLoginForm').classList.toggle('hidden', !isLogin);
+  document.getElementById('patientRegisterForm').classList.toggle('hidden', isLogin);
+  document.getElementById('patientTabLogin').classList.toggle('tab-active', isLogin);
+  document.getElementById('patientTabRegister').classList.toggle('tab-active', !isLogin);
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('patientAuthError');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+document.getElementById('patientTabLogin').addEventListener('click', () => switchPatientTab('login'));
+document.getElementById('patientTabRegister').addEventListener('click', () => switchPatientTab('register'));
+
+document.getElementById('patientLoginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  document.getElementById('patientAuthError').classList.add('hidden');
+  const fd = new FormData(e.target);
+  try {
+    const data = await apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: fd.get('email'), password: fd.get('password') })
+    });
+    if (data.user.role !== 'patient') {
+      showAuthError('Ce compte n\'est pas un compte patient.');
+      return;
+    }
+    setToken(data.token);
+    setUser(data.user);
+    closePatientAuth();
+    document.getElementById('navGuest').style.display = 'none';
+    document.getElementById('navUser').style.display = 'flex';
+    document.getElementById('userName').textContent = data.user.full_name;
+    showToast('Connecté avec succès !');
+  } catch (err) { showAuthError(err.message); }
+});
+
+document.getElementById('patientRegisterForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  document.getElementById('patientAuthError').classList.add('hidden');
+  const fd = new FormData(e.target);
+  try {
+    const data = await apiFetch('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        full_name: fd.get('full_name'),
+        email: fd.get('email'),
+        phone: fd.get('phone'),
+        password: fd.get('password')
+      })
+    });
+    setToken(data.token);
+    setUser(data.user);
+    closePatientAuth();
+    document.getElementById('navGuest').style.display = 'none';
+    document.getElementById('navUser').style.display = 'flex';
+    document.getElementById('userName').textContent = data.user.full_name;
+    showToast('Compte créé avec succès !');
+  } catch (err) { showAuthError(err.message); }
+});
+
+// ── BOOKING FLOW ──────────────────────────────────────────────────────────────
 
 async function loadVillages() {
   try {
@@ -63,7 +156,6 @@ document.getElementById('selSpecialist').addEventListener('change', async e => {
       return;
     }
 
-    // Affichage lecture seule des créneaux disponibles
     document.getElementById('availableSlotsList').innerHTML = availableSlots.map(s =>
       `<span class="px-3 py-1 rounded-lg bg-white border border-slate-200 text-sm text-slate-600">
         📅 ${s.slot_date} &nbsp;⏰ ${s.start_time.slice(0,5)} – ${s.end_time.slice(0,5)}
@@ -72,7 +164,6 @@ document.getElementById('selSpecialist').addEventListener('change', async e => {
     document.getElementById('availableSlotsInfo').classList.remove('hidden');
     document.getElementById('dateTimeSection').classList.remove('hidden');
 
-    // Pré-remplir la date avec la première date disponible
     document.getElementById('inputDate').value = availableSlots[0].slot_date;
     document.getElementById('inputTime').value = '';
     hideVerifyMessage();
@@ -108,7 +199,6 @@ document.getElementById('btnVerify').addEventListener('click', () => {
     return;
   }
 
-  // Chercher un créneau dont la plage horaire contient l'heure choisie
   const match = availableSlots.find(s => {
     if (s.slot_date !== date) return false;
     return time >= s.start_time.slice(0, 5) && time < s.end_time.slice(0, 5);
@@ -127,32 +217,49 @@ document.getElementById('btnVerify').addEventListener('click', () => {
   selectedSlot = String(match.id);
   document.getElementById('slotInfo').textContent =
     `${match.slot_date} · ${match.start_time.slice(0,5)} – ${match.end_time.slice(0,5)}`;
-  showVerifyMessage(`Créneau disponible ! Vous pouvez confirmer votre demande.`, true);
+  showVerifyMessage('Créneau disponible ! Vous pouvez confirmer votre demande.', true);
   document.getElementById('bookForm').classList.remove('hidden');
+  document.getElementById('guestFields').style.display = getUser() ? 'none' : 'block';
   document.getElementById('formBook').reset();
 });
 
 document.getElementById('formBook').addEventListener('submit', async e => {
   e.preventDefault();
   if (!selectedSlot) return;
+
   const fd = new FormData(e.target);
+  const user = getUser();
+
+  const body = {
+    slot_id: parseInt(selectedSlot),
+    reason: fd.get('reason'),
+    consultation_type: fd.get('consultation_type'),
+  };
+
+  if (!user) {
+    const name = (fd.get('patient_name') || '').trim();
+    if (!name) {
+      showToast('Veuillez indiquer votre nom', 'error');
+      return;
+    }
+    body.patient_name = name;
+    body.patient_phone = (fd.get('patient_phone') || '').trim() || undefined;
+  }
+
   try {
     await apiFetch('/appointments', {
       method: 'POST',
-      body: JSON.stringify({
-        slot_id: parseInt(selectedSlot),
-        reason: fd.get('reason'),
-        consultation_type: fd.get('consultation_type')
-      })
+      body: JSON.stringify(body)
     });
     showToast('Demande envoyée avec succès !');
     e.target.reset();
     document.getElementById('bookForm').classList.add('hidden');
     hideVerifyMessage();
-    // Recharger les créneaux pour mettre à jour la liste
     document.getElementById('selSpecialist').dispatchEvent(new Event('change'));
   } catch (err) { showToast(err.message, 'error'); }
 });
+
+// ── MY APPOINTMENTS ───────────────────────────────────────────────────────────
 
 async function loadMyAppointments() {
   const container = document.getElementById('myAppointments');

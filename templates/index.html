@@ -18,12 +18,6 @@
           class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-emerald-500 grid place-items-center text-white">❤️</span>
         <span>RDV <span class="text-sky-600">Parakou</span></span>
       </a>
-      <div class="flex gap-2">
-        <button onclick="openAuth('login')"
-          class="px-4 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100">Connexion</button>
-        <button onclick="openAuth('register')"
-          class="px-4 py-2 rounded-lg text-sm font-medium bg-sky-600 text-white hover:bg-sky-700">Inscription</button>
-      </div>
     </div>
   </nav>
 
@@ -39,13 +33,11 @@
       </h1>
       <p class="mt-5 text-lg text-white">Choisissez votre village, votre clinique, votre médecin — et un créneau qui
         vous convient. Confirmation rapide par le spécialiste.</p>
-      <div class="mt-8 flex flex-wrap gap-3">
-        <button onclick="openAuth('register')"
-          class="px-6 py-3 rounded-xl bg-sky-600 text-white font-semibold shadow-lg shadow-sky-200 hover:bg-sky-700">Créer
-          un compte patient</button>
-        <button onclick="openAuth('login')"
-          class="px-6 py-3 rounded-xl bg-white border border-slate-200 font-semibold hover:bg-slate-50">J'ai déjà un
-          compte</button>
+      <div class="mt-8">
+        <a href="/patient"
+          class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-sky-600 text-white font-semibold shadow-lg shadow-sky-200 hover:bg-sky-700">
+          Êtes-vous patient ? Continuer →
+        </a>
       </div>
       <div class="mt-8 flex gap-6 text-sm text-white">
         <div><strong class="block text-2xl text-white">9</strong>villages couverts</div>
@@ -116,50 +108,10 @@
     </div>
   </footer>
 
-  <!-- Modal Auth -->
-  <div id="authModal"
-    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
-      <div class="flex">
-        <button id="tabLogin" class="flex-1 py-3 font-semibold tab-active">Connexion</button>
-        <button id="tabRegister" class="flex-1 py-3 font-semibold">Inscription</button>
-      </div>
-      <div class="p-6">
-        <div id="authError" class="hidden mb-3 p-3 rounded-lg bg-rose-50 text-rose-700 text-sm"></div>
-        <form id="loginForm" class="space-y-3">
-          <div><label class="text-sm font-medium">Email</label><input name="email" type="email" required
-              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" />
-          </div>
-          <div><label class="text-sm font-medium">Mot de passe</label><input name="password" type="password" required
-              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" />
-          </div>
-          <button class="w-full py-2.5 rounded-lg bg-sky-600 text-white font-semibold hover:bg-sky-700">Se
-            connecter</button>
-        </form>
-        <form id="registerForm" class="space-y-3 hidden">
-          <div><label class="text-sm font-medium">Nom complet</label><input name="full_name" required
-              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" />
-          </div>
-          <div><label class="text-sm font-medium">Email</label><input name="email" type="email" required
-              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" />
-          </div>
-          <div><label class="text-sm font-medium">Téléphone</label><input name="phone"
-              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" />
-          </div>
-          <div><label class="text-sm font-medium">Mot de passe</label><input name="password" type="password" required
-              minlength="6"
-              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" />
-          </div>
-          <button class="w-full py-2.5 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700">Créer
-            mon compte</button>
-        </form>
-        <button onclick="closeAuth()" class="w-full mt-3 text-sm text-slate-500 hover:text-slate-700">Annuler</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="{% static 'js/common.js' %}"></script>
-  <script src="{% static 'js/auth.js' %}"></script>
+  <a href="/admin-login" title="Accès personnel médical"
+    class="fixed bottom-6 right-6 z-50 w-10 h-10 rounded-full bg-white/80 backdrop-blur border border-slate-200 shadow flex items-center justify-center text-lg hover:bg-white hover:shadow-md transition-all">
+    ⚙️
+  </a>
 </body>
 
 </html>

@@ -13,7 +13,8 @@ body {
   background-attachment: fixed;
 }
 
-#authModal.show {
+#authModal.show,
+#patientAuthModal.show {
   display: flex;
 }
 

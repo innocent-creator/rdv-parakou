@@ -9,4 +9,5 @@ urlpatterns = [
     path('patient', TemplateView.as_view(template_name='patient.html')),
     path('specialist', TemplateView.as_view(template_name='specialist.html')),
     path('admin-panel', TemplateView.as_view(template_name='admin.html')),
+    path('admin-login', TemplateView.as_view(template_name='admin_login.html')),
 ]

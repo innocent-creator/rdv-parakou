@@ -88,7 +88,9 @@ class Appointment(models.Model):
         ('rejected', 'Refusé'), ('cancelled', 'Annulé'),
     ]
 
-    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='appointments')
+    patient = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='appointments', null=True, blank=True)
+    patient_name = models.CharField(max_length=200, blank=True, null=True)
+    patient_phone = models.CharField(max_length=50, blank=True, null=True)
     specialist = models.ForeignKey(Specialist, on_delete=models.CASCADE, related_name='appointments')
     slot = models.ForeignKey(AvailabilitySlot, on_delete=models.CASCADE, related_name='appointments')
     reason = models.TextField()
@@ -96,5 +98,15 @@ class Appointment(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def get_patient_name(self):
+        return self.patient.full_name if self.patient else self.patient_name or 'Anonyme'
+
+    def get_patient_phone(self):
+        return (self.patient.phone if self.patient else self.patient_phone) or ''
+
+    def get_patient_email(self):
+        return self.patient.email if self.patient else ''
+
     def __str__(self):
-        return f"{self.patient} → {self.specialist} ({self.status})"
+        name = self.get_patient_name()
+        return f"{name} → {self.specialist} ({self.status})"

@@ -18,10 +18,16 @@
           class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-emerald-500 grid place-items-center text-white">❤️</span>
         <span>RDV <span class="text-sky-600">Parakou</span></span>
       </a>
-      <div class="flex items-center gap-3">
+      <div id="navUser" style="display:none" class="flex items-center gap-3">
         <span class="text-sm text-slate-600">Bonjour, <strong id="userName"></strong></span>
         <button onclick="logout()"
           class="px-4 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100">Déconnexion</button>
+      </div>
+      <div id="navGuest" style="display:none" class="flex gap-2">
+        <button onclick="openPatientAuth('login')"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100">Connexion</button>
+        <button onclick="openPatientAuth('register')"
+          class="px-4 py-2 rounded-lg text-sm font-medium bg-sky-600 text-white hover:bg-sky-700">Inscription</button>
       </div>
     </div>
   </nav>
@@ -87,6 +93,20 @@
         <div id="bookForm" class="hidden border-t border-slate-100 pt-5 space-y-4">
           <div class="text-sm text-sky-700 font-medium">Créneau sélectionné : <span id="slotInfo"></span></div>
           <form id="formBook" class="space-y-4">
+            <!-- Champs affichés uniquement pour les visiteurs non connectés -->
+            <div id="guestFields" class="hidden space-y-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <p class="text-xs text-slate-500 font-medium">Vos coordonnées (aucun compte requis)</p>
+              <div>
+                <label class="text-sm font-medium">Votre nom complet</label>
+                <input name="patient_name" id="inputPatientName"
+                  class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" />
+              </div>
+              <div>
+                <label class="text-sm font-medium">Votre téléphone</label>
+                <input name="patient_phone" id="inputPatientPhone" type="tel"
+                  class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" />
+              </div>
+            </div>
             <div>
               <label class="text-sm font-medium">Motif de consultation</label>
               <textarea name="reason" required rows="2"
@@ -118,8 +138,42 @@
     </div>
   </div>
 
-  <script src="{% static 'js/common.js' %}"></script>
-  <script src="{% static 'js/patient.js' %}"></script>
+  <!-- Modal Auth Patient -->
+  <div id="patientAuthModal"
+    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+      <div class="flex">
+        <button id="patientTabLogin" class="flex-1 py-3 font-semibold tab-active">Connexion</button>
+        <button id="patientTabRegister" class="flex-1 py-3 font-semibold">Inscription</button>
+      </div>
+      <div class="p-6">
+        <div id="patientAuthError" class="hidden mb-3 p-3 rounded-lg bg-rose-50 text-rose-700 text-sm"></div>
+        <form id="patientLoginForm" class="space-y-3">
+          <div><label class="text-sm font-medium">Email</label><input name="email" type="email" required
+              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" /></div>
+          <div><label class="text-sm font-medium">Mot de passe</label><input name="password" type="password" required
+              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" /></div>
+          <button class="w-full py-2.5 rounded-lg bg-sky-600 text-white font-semibold hover:bg-sky-700">Se connecter</button>
+        </form>
+        <form id="patientRegisterForm" class="space-y-3 hidden">
+          <div><label class="text-sm font-medium">Nom complet</label><input name="full_name" required
+              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" /></div>
+          <div><label class="text-sm font-medium">Email</label><input name="email" type="email" required
+              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" /></div>
+          <div><label class="text-sm font-medium">Téléphone</label><input name="phone"
+              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" /></div>
+          <div><label class="text-sm font-medium">Mot de passe</label><input name="password" type="password" required
+              minlength="6"
+              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" /></div>
+          <button class="w-full py-2.5 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700">Créer mon compte</button>
+        </form>
+        <button onclick="closePatientAuth()" class="w-full mt-3 text-sm text-slate-500 hover:text-slate-700">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{% static 'js/common.js' %}?v=3"></script>
+  <script src="{% static 'js/patient.js' %}?v=3"></script>
 </body>
 
 </html>

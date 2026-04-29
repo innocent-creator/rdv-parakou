@@ -120,15 +120,24 @@ def specialist_slots_public(request, pk):
 # ── PATIENT ───────────────────────────────────────────────────────────────────
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def appointments_create(request):
-    if request.user.role != 'patient':
-        return JsonResponse({'error': 'Accès refusé'}, status=403)
     d = request.data
     slot_id = d.get('slot_id')
     reason = (d.get('reason') or '').strip()
     ctype = (d.get('consultation_type') or '').strip()
     if not slot_id or not reason or not ctype:
         return JsonResponse({'error': 'Champs requis manquants'}, status=400)
+
+    user = request.user if request.user.is_authenticated else None
+    if user and user.role not in ('patient',):
+        return JsonResponse({'error': 'Accès réservé aux patients'}, status=403)
+
+    patient_name = (d.get('patient_name') or '').strip() or None
+    patient_phone = (d.get('patient_phone') or '').strip() or None
+    if not user and not patient_name:
+        return JsonResponse({'error': 'Veuillez indiquer votre nom'}, status=400)
+
     try:
         slot = AvailabilitySlot.objects.get(id=slot_id)
     except AvailabilitySlot.DoesNotExist:
@@ -139,7 +148,10 @@ def appointments_create(request):
         slot.status = 'pending'
         slot.save()
         apt = Appointment.objects.create(
-            patient=request.user, specialist=slot.specialist, slot=slot,
+            patient=user,
+            patient_name=None if user else patient_name,
+            patient_phone=None if user else patient_phone,
+            specialist=slot.specialist, slot=slot,
             reason=reason, consultation_type=ctype, status='pending',
         )
     return JsonResponse({'id': apt.id, 'message': 'Demande envoyée.'})
@@ -275,9 +287,9 @@ def specialist_appointments(request):
     data = [{
         'id': a.id, 'status': a.status, 'reason': a.reason,
         'consultation_type': a.consultation_type,
-        'patient_name': a.patient.full_name,
-        'patient_email': a.patient.email,
-        'patient_phone': a.patient.phone,
+        'patient_name': a.get_patient_name(),
+        'patient_email': a.get_patient_email(),
+        'patient_phone': a.get_patient_phone(),
         'slot_date': str(a.slot.slot_date),
         'start_time': str(a.slot.start_time),
         'end_time': str(a.slot.end_time),

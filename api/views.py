@@ -237,6 +237,7 @@ def appointment_cancel(request, pk):
 def _send_confirmation_email(apt):
     recipient = apt.get_patient_email()
     if not recipient:
+        print(f'[EMAIL] Apt#{apt.id} : aucun email patient trouvé, envoi annulé.')
         return
 
     patient_name = apt.get_patient_name()
@@ -261,9 +262,12 @@ def _send_confirmation_email(apt):
         f'— L\'équipe RDV Parakou'
     )
 
+    print(f'[EMAIL] Tentative d\'envoi à : {recipient}')
     try:
         send_mail(subject, body, None, [recipient], fail_silently=False)
+        print(f'[EMAIL] Email envoyé avec succès à {recipient}')
     except Exception as exc:
+        print(f'[EMAIL] ERREUR envoi email apt#{apt.id} à {recipient} : {exc}')
         logger.error('Échec envoi email confirmation apt#%s à %s : %s', apt.id, recipient, exc)
 
 

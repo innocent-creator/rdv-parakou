@@ -119,7 +119,7 @@ async function loadSlots() {
           <span class="text-slate-500 ml-2">${s.start_time.slice(0,5)}–${s.end_time.slice(0,5)}</span>
         </div>
         <div class="flex items-center gap-3">
-          <span class="pill-${s.status} px-2 py-0.5 rounded-full text-xs font-semibold">${s.status}</span>
+          <span class="pill-${s.status} px-2 py-0.5 rounded-full text-xs font-semibold">${statusFr(s.status)}</span>
           ${s.status === 'available' ? `<button onclick="deleteSlot(${s.id})" class="text-xs text-rose-600 hover:underline">Supprimer</button>` : ''}
         </div>
       </div>`).join('');
@@ -169,7 +169,7 @@ async function loadAppointments() {
             <div class="text-sm mt-1 text-slate-600">Motif : ${a.reason} · ${a.consultation_type}</div>
           </div>
           <div class="flex flex-col items-end gap-2">
-            <span class="pill-${a.status} px-2 py-0.5 rounded-full text-xs font-semibold">${a.status}</span>
+            <span class="pill-${a.status} px-2 py-0.5 rounded-full text-xs font-semibold">${statusFr(a.status)}</span>
             ${a.status === 'pending' ? `
               <button onclick="confirmApt(${a.id})" class="text-xs text-emerald-600 hover:underline">Confirmer</button>
               <button onclick="rejectApt(${a.id})" class="text-xs text-rose-600 hover:underline">Rejeter</button>` : ''}

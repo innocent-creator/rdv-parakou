@@ -342,7 +342,7 @@ async function loadMyAppointments() {
             <div class="text-sm mt-1 text-slate-600">Motif : ${a.reason} · ${a.consultation_type}</div>
           </div>
           <div class="flex flex-col items-end gap-2">
-            <span class="pill-${a.status} px-2 py-0.5 rounded-full text-xs font-semibold">${a.status}</span>
+            <span class="pill-${a.status} px-2 py-0.5 rounded-full text-xs font-semibold">${statusFr(a.status)}</span>
             ${a.status === 'pending' ? `<button onclick="cancelApt(${a.id})" class="text-xs text-rose-600 hover:underline">Annuler</button>` : ''}
           </div>
         </div>

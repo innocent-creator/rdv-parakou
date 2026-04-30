@@ -22,12 +22,6 @@
   </nav>
 
   <div class="max-w-4xl mx-auto px-6 py-10 ">
-    <div class="flex gap-2 mb-8 bg-white/80 backdrop-blur rounded-xl p-1 shadow-sm border border-slate-100 w-fit">
-      <button id="tabBook" class="px-5 py-2 rounded-lg font-medium text-sm tab-active" onclick="showTab('book')">Prendre
-        un RDV</button>
-      <button id="tabMine" class="px-5 py-2 rounded-lg font-medium text-sm " onclick="showTab('mine')">Mes
-        rendez-vous</button>
-    </div>
 
     <!-- Section Prendre RDV -->
     <div id="sectionBook">
@@ -146,47 +140,6 @@
       </div>
     </div>
 
-    <!-- Section Mes RDV -->
-    <div id="sectionMine" class="hidden space-y-4">
-      <h2 class="font-bold  text-white">Mes rendez-vous</h2>
-      <div id="myAppointments" class="space-y-4">
-        <p class="text-slate-500">Chargement...</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Auth Patient -->
-  <div id="patientAuthModal"
-    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
-      <div class="flex">
-        <button id="patientTabLogin" class="flex-1 py-3 font-semibold tab-active">Connexion</button>
-        <button id="patientTabRegister" class="flex-1 py-3 font-semibold">Inscription</button>
-      </div>
-      <div class="p-6">
-        <div id="patientAuthError" class="hidden mb-3 p-3 rounded-lg bg-rose-50 text-rose-700 text-sm"></div>
-        <form id="patientLoginForm" class="space-y-3">
-          <div><label class="text-sm font-medium">Email</label><input name="email" type="email" required
-              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" /></div>
-          <div><label class="text-sm font-medium">Mot de passe</label><input name="password" type="password" required
-              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" /></div>
-          <button class="w-full py-2.5 rounded-lg bg-sky-600 text-white font-semibold hover:bg-sky-700">Se connecter</button>
-        </form>
-        <form id="patientRegisterForm" class="space-y-3 hidden">
-          <div><label class="text-sm font-medium">Nom complet</label><input name="full_name" required
-              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" /></div>
-          <div><label class="text-sm font-medium">Email</label><input name="email" type="email" required
-              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" /></div>
-          <div><label class="text-sm font-medium">Téléphone</label><input name="phone"
-              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" /></div>
-          <div><label class="text-sm font-medium">Mot de passe</label><input name="password" type="password" required
-              minlength="6"
-              class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 outline-none" /></div>
-          <button class="w-full py-2.5 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700">Créer mon compte</button>
-        </form>
-        <button onclick="closePatientAuth()" class="w-full mt-3 text-sm text-slate-500 hover:text-slate-700">Annuler</button>
-      </div>
-    </div>
   </div>
 
   <script src="{% static 'js/common.js' %}?v=4"></script>

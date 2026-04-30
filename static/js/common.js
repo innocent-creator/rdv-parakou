@@ -38,3 +38,11 @@ function logout() {
   removeUser();
   window.location.href = '/';
 }
+
+function statusFr(status) {
+  const map = {
+    confirmed: 'Confirmé', pending: 'En attente', rejected: 'Rejeté', cancelled: 'Rejeté',
+    available: 'Disponible', booked: 'Réservé'
+  };
+  return map[status] || status;
+}

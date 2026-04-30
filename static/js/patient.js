@@ -8,12 +8,18 @@
 })();
 
 let selectedSlot = null;
+let selectedDate = null;
 let availableSlots = [];
 let specialistsData = [];
+let calendarYear = new Date().getFullYear();
+let calendarMonth = new Date().getMonth();
 
 const BIO_LIMIT = 180;
+const MONTH_NAMES = ['Janvier','Février','Mars','Avril','Mai','Juin',
+                     'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 
-// ── BOOKING FLOW ──────────────────────────────────────────────────────────────
+// ── CHARGEMENT GÉOGRAPHIQUE ───────────────────────────────────────────────────
 
 async function loadCommunes() {
   try {
@@ -65,9 +71,13 @@ document.getElementById('selClinic').addEventListener('change', async e => {
     specialistsData = await apiFetch(`/clinics/${id}/specialists`);
     document.getElementById('selSpecialist').innerHTML =
       '<option value="">-- Choisir un spécialiste --</option>' +
-      specialistsData.map(s => `<option value="${s.id}">${s.full_name} (${s.specialty}) — ${s.free_slots} créneau(x)</option>`).join('');
+      specialistsData.map(s =>
+        `<option value="${s.id}">${s.full_name} (${s.specialty}) — ${s.free_slots} créneau(x)</option>`
+      ).join('');
   } catch (e) { showToast('Erreur chargement spécialistes', 'error'); }
 });
+
+// ── BIO SPÉCIALISTE ───────────────────────────────────────────────────────────
 
 function showSpecialistBio(sp) {
   const parts = sp.full_name.trim().split(/\s+/);
@@ -127,74 +137,143 @@ document.getElementById('selSpecialist').addEventListener('change', async e => {
       return;
     }
 
-    document.getElementById('availableSlotsList').innerHTML = availableSlots.map(s =>
-      `<span class="px-3 py-1 rounded-lg bg-white border border-slate-200 text-sm text-slate-600">
-        📅 ${s.slot_date} &nbsp;⏰ ${s.start_time.slice(0,5)} – ${s.end_time.slice(0,5)}
-      </span>`
-    ).join('');
-    document.getElementById('availableSlotsInfo').classList.remove('hidden');
-    document.getElementById('dateTimeSection').classList.remove('hidden');
-    updateSlotArrows();
+    // Positionner le calendrier sur le mois du premier créneau disponible
+    const firstDate = new Date(availableSlots[0].slot_date + 'T00:00:00');
+    calendarYear = firstDate.getFullYear();
+    calendarMonth = firstDate.getMonth();
 
-    document.getElementById('inputDate').value = availableSlots[0].slot_date;
-    document.getElementById('inputTime').value = '';
-    hideVerifyMessage();
+    renderCalendar();
   } catch (e) { showToast('Erreur chargement créneaux', 'error'); }
 });
 
 function resetSlots() {
   selectedSlot = null;
+  selectedDate = null;
   availableSlots = [];
   document.getElementById('specialistBio').classList.add('hidden');
-  document.getElementById('availableSlotsInfo').classList.add('hidden');
-  document.getElementById('dateTimeSection').classList.add('hidden');
+  document.getElementById('calendarSection').classList.add('hidden');
   document.getElementById('bookForm').classList.add('hidden');
-  hideVerifyMessage();
 }
 
-function showVerifyMessage(msg, success) {
-  const el = document.getElementById('verifyMessage');
-  el.textContent = msg;
-  el.className = `mt-3 text-sm px-3 py-2 rounded-lg ${success ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`;
-  el.classList.remove('hidden');
-}
+// ── CALENDRIER ────────────────────────────────────────────────────────────────
 
-function hideVerifyMessage() {
-  document.getElementById('verifyMessage').classList.add('hidden');
-}
+function renderCalendar() {
+  const availableDates = new Set(availableSlots.map(s => s.slot_date));
 
-document.getElementById('btnVerify').addEventListener('click', () => {
-  const date = document.getElementById('inputDate').value;
-  const time = document.getElementById('inputTime').value;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  if (!date || !time) {
-    showVerifyMessage('Veuillez saisir une date et une heure.', false);
-    return;
+  const firstDay = new Date(calendarYear, calendarMonth, 1);
+  const lastDay = new Date(calendarYear, calendarMonth + 1, 0);
+
+  // Semaine commence lundi : 0=Lun … 6=Dim
+  let startDow = firstDay.getDay();
+  startDow = (startDow + 6) % 7;
+
+  let gridHtml = '';
+
+  for (let i = 0; i < startDow; i++) {
+    gridHtml += '<div></div>';
   }
 
-  const match = availableSlots.find(s => {
-    if (s.slot_date !== date) return false;
-    return time >= s.start_time.slice(0, 5) && time < s.end_time.slice(0, 5);
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dayDate = new Date(calendarYear, calendarMonth, d);
+    const isPast = dayDate < today;
+    const hasSlot = availableDates.has(dateStr);
+    const isSelected = dateStr === selectedDate;
+
+    if (isSelected) {
+      gridHtml += `<div class="text-center py-2 text-sm bg-sky-700 text-white rounded-lg font-bold cursor-pointer select-none" onclick="selectCalendarDate('${dateStr}')">${d}</div>`;
+    } else if (hasSlot && !isPast) {
+      gridHtml += `<div class="text-center py-2 text-sm bg-sky-100 text-sky-800 rounded-lg cursor-pointer hover:bg-sky-200 font-medium select-none" onclick="selectCalendarDate('${dateStr}')">${d}</div>`;
+    } else {
+      gridHtml += `<div class="text-center py-2 text-sm text-slate-300 rounded-lg select-none">${d}</div>`;
+    }
+  }
+
+  document.getElementById('calendarGrid').innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <button id="calPrev" type="button"
+        class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-sky-100 hover:text-sky-700 font-bold text-xl leading-none">&#8249;</button>
+      <span class="font-bold text-slate-700">${MONTH_NAMES[calendarMonth]} ${calendarYear}</span>
+      <button id="calNext" type="button"
+        class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-sky-100 hover:text-sky-700 font-bold text-xl leading-none">&#8250;</button>
+    </div>
+    <div class="grid grid-cols-7 gap-1 mb-2">
+      ${DAY_NAMES.map(d => `<div class="text-center text-xs font-semibold text-slate-400 py-1">${d}</div>`).join('')}
+    </div>
+    <div class="grid grid-cols-7 gap-1">
+      ${gridHtml}
+    </div>
+  `;
+
+  document.getElementById('calPrev').addEventListener('click', () => {
+    calendarMonth--;
+    if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
+    renderCalendar();
+  });
+  document.getElementById('calNext').addEventListener('click', () => {
+    calendarMonth++;
+    if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
+    renderCalendar();
   });
 
-  if (!match) {
-    showVerifyMessage(
-      `Aucun créneau disponible le ${date} à ${time}. Consultez les créneaux disponibles ci-dessus.`,
-      false
-    );
-    document.getElementById('bookForm').classList.add('hidden');
-    selectedSlot = null;
+  document.getElementById('calendarSection').classList.remove('hidden');
+  renderTimePicker();
+}
+
+function selectCalendarDate(dateStr) {
+  selectedDate = dateStr;
+  selectedSlot = null;
+  document.getElementById('bookForm').classList.add('hidden');
+  renderCalendar();
+}
+
+function renderTimePicker() {
+  const picker = document.getElementById('timePicker');
+  if (!selectedDate) {
+    picker.innerHTML = '';
+    picker.classList.add('hidden');
     return;
   }
 
-  selectedSlot = String(match.id);
+  const slots = availableSlots.filter(s => s.slot_date === selectedDate);
+  if (!slots.length) {
+    picker.innerHTML = '';
+    picker.classList.add('hidden');
+    return;
+  }
+
+  const buttonsHtml = slots.map(s => {
+    const isSelected = selectedSlot === String(s.id);
+    const cls = isSelected
+      ? 'px-4 py-2 rounded-xl bg-sky-700 text-white font-semibold text-sm'
+      : 'px-4 py-2 rounded-xl bg-sky-100 text-sky-800 font-medium text-sm hover:bg-sky-200 cursor-pointer';
+    return `<button type="button" class="${cls}"
+      onclick="selectTimeSlot(${s.id}, '${s.start_time}', '${s.end_time}')">
+      ${s.start_time.slice(0, 5)}–${s.end_time.slice(0, 5)}
+    </button>`;
+  }).join('');
+
+  picker.innerHTML = `
+    <p class="text-sm font-medium text-slate-600 mb-3">Heures disponibles :</p>
+    <div class="flex flex-wrap gap-2">${buttonsHtml}</div>
+  `;
+  picker.classList.remove('hidden');
+}
+
+function selectTimeSlot(id, startTime, endTime) {
+  selectedSlot = String(id);
   document.getElementById('slotInfo').textContent =
-    `${match.slot_date} · ${match.start_time.slice(0,5)} – ${match.end_time.slice(0,5)}`;
-  showVerifyMessage('Créneau disponible ! Vous pouvez confirmer votre demande.', true);
+    `${selectedDate} · ${startTime.slice(0, 5)} – ${endTime.slice(0, 5)}`;
   document.getElementById('bookForm').classList.remove('hidden');
   document.getElementById('guestFields').style.display = getUser() ? 'none' : 'block';
   document.getElementById('formBook').reset();
-});
+  renderTimePicker();
+}
+
+// ── FORMULAIRE DE RÉSERVATION ─────────────────────────────────────────────────
 
 document.getElementById('formBook').addEventListener('submit', async e => {
   e.preventDefault();
@@ -233,23 +312,8 @@ document.getElementById('formBook').addEventListener('submit', async e => {
     showToast('Demande envoyée avec succès !');
     e.target.reset();
     document.getElementById('bookForm').classList.add('hidden');
-    hideVerifyMessage();
     document.getElementById('selSpecialist').dispatchEvent(new Event('change'));
   } catch (err) { showToast(err.message, 'error'); }
 });
-
-// ── NAVIGATION CRÉNEAUX ───────────────────────────────────────────────────────
-
-function scrollSlots(delta) {
-  document.getElementById('availableSlotsList').scrollBy({ left: delta, behavior: 'smooth' });
-}
-
-function updateSlotArrows() {
-  const el = document.getElementById('availableSlotsList');
-  document.getElementById('slotScrollLeft').disabled  = el.scrollLeft <= 0;
-  document.getElementById('slotScrollRight').disabled = el.scrollLeft >= el.scrollWidth - el.clientWidth - 1;
-}
-
-document.getElementById('availableSlotsList').addEventListener('scroll', updateSlotArrows);
 
 loadCommunes();

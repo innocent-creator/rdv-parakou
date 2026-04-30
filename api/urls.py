@@ -17,7 +17,6 @@ urlpatterns = [
 
     # Patient
     path('appointments', views.appointments_create),
-    path('appointments/mine', views.appointments_mine),
     path('appointments/<int:pk>/cancel', views.appointment_cancel),
 
     # Specialist
@@ -35,4 +34,8 @@ urlpatterns = [
     path('admin/users/<int:pk>', views.admin_delete_user),
     path('admin/specialists/<int:pk>/profile', views.admin_update_specialist),
     path('admin/clinics', views.admin_clinics),
+    # Gestion des données (ajout communes / villages / cliniques)
+    path('admin/data/communes', views.admin_communes_manage),
+    path('admin/data/villages', views.admin_villages_manage),
+    path('admin/data/clinics', views.admin_clinics_create),
 ]

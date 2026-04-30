@@ -52,6 +52,7 @@
       <button id="tab_patients" class="px-5 py-2 rounded-lg font-medium text-sm tab-active" onclick="showTab('patients')">Patients</button>
       <button id="tab_specialists" class="px-5 py-2 rounded-lg font-medium text-sm" onclick="showTab('specialists')">Spécialistes</button>
       <button id="tab_clinics" class="px-5 py-2 rounded-lg font-medium text-sm" onclick="showTab('clinics')">Cliniques</button>
+      <button id="tab_donnees" class="px-5 py-2 rounded-lg font-medium text-sm" onclick="showTab('donnees')">Données</button>
     </div>
 
     <!-- Patients -->
@@ -132,6 +133,136 @@
         </div>
       </div>
     </div>
+    <!-- ── SECTION DONNÉES ──────────────────────────────────────────────────── -->
+    <div id="section_donnees" class="hidden space-y-8">
+
+      <!-- Communes -->
+      <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 font-bold text-slate-800">Communes</div>
+        <div class="p-5 border-b border-slate-100">
+          <form id="formAddCommune" class="flex gap-3 items-end">
+            <div class="flex-1">
+              <label class="text-sm font-medium text-slate-700 block mb-1">Nom de la commune</label>
+              <input id="inputCommuneName" required placeholder="Ex : Parakou"
+                class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-400" />
+            </div>
+            <button type="submit"
+              class="px-5 py-2 rounded-lg bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 whitespace-nowrap">
+              + Ajouter
+            </button>
+          </form>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+              <tr>
+                <th class="py-2 px-4 text-left">Nom</th>
+                <th class="py-2 px-4 text-left">Villages rattachés</th>
+              </tr>
+            </thead>
+            <tbody id="communesListBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Villages -->
+      <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 font-bold text-slate-800">Villages</div>
+        <div class="p-5 border-b border-slate-100">
+          <form id="formAddVillage" class="grid md:grid-cols-3 gap-3 items-end">
+            <div>
+              <label class="text-sm font-medium text-slate-700 block mb-1">Nom du village</label>
+              <input id="inputVillageName" required placeholder="Ex : Banikanni"
+                class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-400" />
+            </div>
+            <div>
+              <label class="text-sm font-medium text-slate-700 block mb-1">Commune</label>
+              <select id="selectVillageCommune" required
+                class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+                <option value="">-- Choisir --</option>
+              </select>
+            </div>
+            <div>
+              <button type="submit"
+                class="w-full px-5 py-2 rounded-lg bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700">
+                + Ajouter
+              </button>
+            </div>
+          </form>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+              <tr>
+                <th class="py-2 px-4 text-left">Village</th>
+                <th class="py-2 px-4 text-left">Commune</th>
+              </tr>
+            </thead>
+            <tbody id="villagesListBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Cliniques -->
+      <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 font-bold text-slate-800">Cliniques</div>
+        <div class="p-5 border-b border-slate-100">
+          <form id="formAddClinic" class="grid md:grid-cols-2 gap-4 items-end">
+            <div>
+              <label class="text-sm font-medium text-slate-700 block mb-1">Nom de la clinique</label>
+              <input id="inputClinicName" required placeholder="Ex : Clinique Saint-Pierre"
+                class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-400" />
+            </div>
+            <div>
+              <label class="text-sm font-medium text-slate-700 block mb-1">Village</label>
+              <select id="selectClinicVillage" required
+                class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+                <option value="">-- Choisir --</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm font-medium text-slate-700 block mb-1">Adresse (optionnel)</label>
+              <input id="inputClinicAddress" placeholder="Ex : Carrefour centre"
+                class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-400" />
+            </div>
+            <div>
+              <label class="text-sm font-medium text-slate-700 block mb-1">Téléphone (optionnel)</label>
+              <input id="inputClinicPhone" type="tel" placeholder="+229 …"
+                class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-400" />
+            </div>
+            <div class="md:col-span-2">
+              <button type="submit"
+                class="w-full py-2.5 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700">
+                + Ajouter la clinique
+              </button>
+            </div>
+          </form>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+              <tr>
+                <th class="py-2 px-4 text-left">Clinique</th>
+                <th class="py-2 px-4 text-left">Village</th>
+                <th class="py-2 px-4 text-left">Adresse</th>
+                <th class="py-2 px-4 text-left">Téléphone</th>
+              </tr>
+            </thead>
+            <tbody id="clinicsListBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Rappel spécialiste -->
+      <div class="bg-sky-50/60 border border-sky-100 rounded-2xl p-5 text-sm text-sky-800">
+        Pour ajouter un <strong>spécialiste</strong>, rendez-vous dans l'onglet
+        <button onclick="showTab('specialists')"
+          class="underline font-semibold hover:text-sky-600">Spécialistes</button>
+        — le formulaire d'ajout se trouve en bas de la page.
+      </div>
+
+    </div><!-- /section_donnees -->
+
   </div>
 
   <!-- Modal édition profil spécialiste -->

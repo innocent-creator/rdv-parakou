@@ -191,28 +191,6 @@ def appointments_create(request):
     return JsonResponse({'id': apt.id, 'message': 'Demande envoyée.'})
 
 
-@api_view(['GET'])
-def appointments_mine(request):
-    if request.user.role != 'patient':
-        return JsonResponse({'error': 'Accès refusé'}, status=403)
-    apts = (
-        Appointment.objects
-        .filter(patient=request.user)
-        .select_related('specialist__user', 'specialist__clinic', 'slot')
-        .order_by('-slot__slot_date', '-slot__start_time')
-    )
-    data = [{
-        'id': a.id, 'status': a.status, 'reason': a.reason,
-        'consultation_type': a.consultation_type,
-        'specialty': a.specialist.specialty,
-        'specialist_name': a.specialist.user.full_name,
-        'clinic_name': a.specialist.clinic.name,
-        'slot_date': str(a.slot.slot_date),
-        'start_time': str(a.slot.start_time),
-        'end_time': str(a.slot.end_time),
-    } for a in apts]
-    return JsonResponse(data, safe=False)
-
 
 @api_view(['POST'])
 def appointment_cancel(request, pk):
@@ -533,3 +511,64 @@ def admin_clinics(request):
         'village_id': c.village_id, 'village_name': c.village.name,
     } for c in Clinic.objects.select_related('village').order_by('village__name', 'name')]
     return JsonResponse(data, safe=False)
+
+
+# ── ADMIN GESTION DES DONNÉES ─────────────────────────────────────────────────
+
+@api_view(['GET', 'POST'])
+def admin_communes_manage(request):
+    if request.user.role != 'admin':
+        return JsonResponse({'error': 'Accès refusé'}, status=403)
+    if request.method == 'GET':
+        return JsonResponse(list(Commune.objects.order_by('name').values('id', 'name')), safe=False)
+    name = (request.data.get('name') or '').strip()
+    if not name:
+        return JsonResponse({'error': 'Nom requis'}, status=400)
+    if Commune.objects.filter(name=name).exists():
+        return JsonResponse({'error': 'Cette commune existe déjà'}, status=409)
+    c = Commune.objects.create(name=name)
+    return JsonResponse({'id': c.id, 'name': c.name}, status=201)
+
+
+@api_view(['GET', 'POST'])
+def admin_villages_manage(request):
+    if request.user.role != 'admin':
+        return JsonResponse({'error': 'Accès refusé'}, status=403)
+    if request.method == 'GET':
+        data = [
+            {'id': v.id, 'name': v.name,
+             'commune_id': v.commune_id,
+             'commune_name': v.commune.name if v.commune else '—'}
+            for v in Village.objects.select_related('commune').order_by('commune__name', 'name')
+        ]
+        return JsonResponse(data, safe=False)
+    name = (request.data.get('name') or '').strip()
+    commune_id = request.data.get('commune_id')
+    if not name or not commune_id:
+        return JsonResponse({'error': 'Nom et commune requis'}, status=400)
+    try:
+        commune = Commune.objects.get(id=commune_id)
+    except Commune.DoesNotExist:
+        return JsonResponse({'error': 'Commune introuvable'}, status=404)
+    if Village.objects.filter(name=name).exists():
+        return JsonResponse({'error': 'Ce village existe déjà'}, status=409)
+    v = Village.objects.create(name=name, commune=commune)
+    return JsonResponse({'id': v.id, 'name': v.name, 'commune_id': commune.id, 'commune_name': commune.name}, status=201)
+
+
+@api_view(['POST'])
+def admin_clinics_create(request):
+    if request.user.role != 'admin':
+        return JsonResponse({'error': 'Accès refusé'}, status=403)
+    name = (request.data.get('name') or '').strip()
+    village_id = request.data.get('village_id')
+    if not name or not village_id:
+        return JsonResponse({'error': 'Nom et village requis'}, status=400)
+    try:
+        village = Village.objects.get(id=village_id)
+    except Village.DoesNotExist:
+        return JsonResponse({'error': 'Village introuvable'}, status=404)
+    address = (request.data.get('address') or '').strip() or None
+    phone = (request.data.get('phone') or '').strip() or None
+    clinic = Clinic.objects.create(name=name, village=village, address=address, phone=phone)
+    return JsonResponse({'id': clinic.id, 'name': clinic.name, 'village_name': village.name}, status=201)

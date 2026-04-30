@@ -4,12 +4,13 @@ if (!user || user.role !== 'admin') window.location.href = '/';
 document.getElementById('userName').textContent = user.full_name;
 
 function showTab(tab) {
-  ['patients', 'specialists', 'clinics'].forEach(t => {
+  ['patients', 'specialists', 'clinics', 'donnees'].forEach(t => {
     document.getElementById(`tab_${t}`).classList.toggle('tab-active', t === tab);
     document.getElementById(`section_${t}`).classList.toggle('hidden', t !== tab);
   });
   if (tab === 'patients') loadPatients();
   else if (tab === 'specialists') loadSpecialists();
+  else if (tab === 'donnees') loadDonnees();
   else loadClinics();
 }
 
@@ -181,3 +182,123 @@ async function deleteUser(id) {
 
 loadStats();
 loadPatients();
+
+// ── GESTION DES DONNÉES (Communes / Villages / Cliniques) ─────────────────────
+
+let _communes = [];
+let _villages = [];
+
+async function loadDonnees() {
+  await Promise.all([loadCommunesData(), loadVillagesData(), loadClinicsData()]);
+}
+
+// ── Communes ──────────────────────────────────────────────────────────────────
+
+async function loadCommunesData() {
+  const tbody = document.getElementById('communesListBody');
+  tbody.innerHTML = '<tr><td colspan="2" class="text-center text-slate-500 py-4">Chargement…</td></tr>';
+  try {
+    _communes = await apiFetch('/admin/data/communes');
+    // Met aussi à jour le select du formulaire Village
+    const sel = document.getElementById('selectVillageCommune');
+    sel.innerHTML = '<option value="">-- Choisir --</option>' +
+      _communes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    // Tableau
+    tbody.innerHTML = _communes.length
+      ? _communes.map(c => `
+          <tr class="border-t border-slate-100 hover:bg-slate-50/50">
+            <td class="py-2 px-4">${c.name}</td>
+            <td class="py-2 px-4 text-slate-500" id="commune_village_count_${c.id}">—</td>
+          </tr>`).join('')
+      : '<tr><td colspan="2" class="text-center text-slate-500 py-4">Aucune commune.</td></tr>';
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="2" class="text-center text-rose-500 py-4">Erreur de chargement.</td></tr>';
+  }
+}
+
+document.getElementById('formAddCommune').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = document.getElementById('inputCommuneName').value.trim();
+  try {
+    await apiFetch('/admin/data/communes', { method: 'POST', body: JSON.stringify({ name }) });
+    showToast('Commune ajoutée !', 'success');
+    document.getElementById('inputCommuneName').value = '';
+    loadCommunesData();
+  } catch (err) { showToast(err.message, 'error'); }
+});
+
+// ── Villages ──────────────────────────────────────────────────────────────────
+
+async function loadVillagesData() {
+  const tbody = document.getElementById('villagesListBody');
+  tbody.innerHTML = '<tr><td colspan="2" class="text-center text-slate-500 py-4">Chargement…</td></tr>';
+  try {
+    _villages = await apiFetch('/admin/data/villages');
+    // Met à jour le select du formulaire Clinique
+    const sel = document.getElementById('selectClinicVillage');
+    sel.innerHTML = '<option value="">-- Choisir --</option>' +
+      _villages.map(v => `<option value="${v.id}">${v.name} (${v.commune_name})</option>`).join('');
+    // Tableau
+    tbody.innerHTML = _villages.length
+      ? _villages.map(v => `
+          <tr class="border-t border-slate-100 hover:bg-slate-50/50">
+            <td class="py-2 px-4">${v.name}</td>
+            <td class="py-2 px-4 text-slate-500">${v.commune_name}</td>
+          </tr>`).join('')
+      : '<tr><td colspan="2" class="text-center text-slate-500 py-4">Aucun village.</td></tr>';
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="2" class="text-center text-rose-500 py-4">Erreur de chargement.</td></tr>';
+  }
+}
+
+document.getElementById('formAddVillage').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name       = document.getElementById('inputVillageName').value.trim();
+  const commune_id = document.getElementById('selectVillageCommune').value;
+  try {
+    await apiFetch('/admin/data/villages', { method: 'POST', body: JSON.stringify({ name, commune_id }) });
+    showToast('Village ajouté !', 'success');
+    document.getElementById('inputVillageName').value = '';
+    document.getElementById('selectVillageCommune').value = '';
+    loadVillagesData();
+  } catch (err) { showToast(err.message, 'error'); }
+});
+
+// ── Cliniques ─────────────────────────────────────────────────────────────────
+
+async function loadClinicsData() {
+  const tbody = document.getElementById('clinicsListBody');
+  tbody.innerHTML = '<tr><td colspan="4" class="text-center text-slate-500 py-4">Chargement…</td></tr>';
+  try {
+    const rows = await apiFetch('/admin/clinics');
+    tbody.innerHTML = rows.length
+      ? rows.map(c => `
+          <tr class="border-t border-slate-100 hover:bg-slate-50/50">
+            <td class="py-2 px-4">${c.name}</td>
+            <td class="py-2 px-4 text-slate-500">${c.village_name}</td>
+            <td class="py-2 px-4 text-slate-500">${c.address || '—'}</td>
+            <td class="py-2 px-4 text-slate-500">${c.phone || '—'}</td>
+          </tr>`).join('')
+      : '<tr><td colspan="4" class="text-center text-slate-500 py-4">Aucune clinique.</td></tr>';
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-rose-500 py-4">Erreur de chargement.</td></tr>';
+  }
+}
+
+document.getElementById('formAddClinic').addEventListener('submit', async e => {
+  e.preventDefault();
+  const payload = {
+    name:       document.getElementById('inputClinicName').value.trim(),
+    village_id: document.getElementById('selectClinicVillage').value,
+    address:    document.getElementById('inputClinicAddress').value.trim(),
+    phone:      document.getElementById('inputClinicPhone').value.trim(),
+  };
+  try {
+    await apiFetch('/admin/data/clinics', { method: 'POST', body: JSON.stringify(payload) });
+    showToast('Clinique ajoutée !', 'success');
+    document.getElementById('formAddClinic').reset();
+    loadClinicsData();
+    // Rafraîchit aussi le select clinique du formulaire Spécialiste
+    clinicsList = [];
+  } catch (err) { showToast(err.message, 'error'); }
+});

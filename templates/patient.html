@@ -73,7 +73,16 @@
         <!-- Créneaux disponibles (affichage lecture seule) -->
         <div id="availableSlotsInfo" class="hidden">
           <label class="text-sm font-medium text-slate-700 block mb-2">Créneaux disponibles chez ce spécialiste</label>
-          <div id="availableSlotsList" class="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200"></div>
+          <div class="flex items-center gap-2">
+            <button id="slotScrollLeft" onclick="scrollSlots(-200)" disabled
+              class="flex-shrink-0 w-8 h-8 rounded-full bg-sky-600 text-white flex items-center justify-center text-xl font-bold hover:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+              style="cursor:pointer;">&#8249;</button>
+            <div id="availableSlotsList" class="flex gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200 min-w-0 flex-1"
+              style="flex-wrap:nowrap;overflow-x:auto;padding-bottom:8px;scrollbar-width:thin;"></div>
+            <button id="slotScrollRight" onclick="scrollSlots(200)"
+              class="flex-shrink-0 w-8 h-8 rounded-full bg-sky-600 text-white flex items-center justify-center text-xl font-bold hover:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+              style="cursor:pointer;">&#8250;</button>
+          </div>
         </div>
 
         <!-- Saisie date + heure par le patient -->

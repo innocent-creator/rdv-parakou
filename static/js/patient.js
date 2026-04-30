@@ -134,6 +134,7 @@ document.getElementById('selSpecialist').addEventListener('change', async e => {
     ).join('');
     document.getElementById('availableSlotsInfo').classList.remove('hidden');
     document.getElementById('dateTimeSection').classList.remove('hidden');
+    updateSlotArrows();
 
     document.getElementById('inputDate').value = availableSlots[0].slot_date;
     document.getElementById('inputTime').value = '';
@@ -236,5 +237,19 @@ document.getElementById('formBook').addEventListener('submit', async e => {
     document.getElementById('selSpecialist').dispatchEvent(new Event('change'));
   } catch (err) { showToast(err.message, 'error'); }
 });
+
+// ── NAVIGATION CRÉNEAUX ───────────────────────────────────────────────────────
+
+function scrollSlots(delta) {
+  document.getElementById('availableSlotsList').scrollBy({ left: delta, behavior: 'smooth' });
+}
+
+function updateSlotArrows() {
+  const el = document.getElementById('availableSlotsList');
+  document.getElementById('slotScrollLeft').disabled  = el.scrollLeft <= 0;
+  document.getElementById('slotScrollRight').disabled = el.scrollLeft >= el.scrollWidth - el.clientWidth - 1;
+}
+
+document.getElementById('availableSlotsList').addEventListener('scroll', updateSlotArrows);
 
 loadCommunes();

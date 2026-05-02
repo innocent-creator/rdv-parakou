@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
+    'django_extensions' ,
     'api',
 ]
 
@@ -55,8 +56,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'rdv_parakou',
-        'USER': 'root',
-        'PASSWORD': '',
+        'USER': 'rdv_user',
+        'PASSWORD': 'rdv_pass',
         'HOST': '127.0.0.1',
         'PORT': '3306',
     }

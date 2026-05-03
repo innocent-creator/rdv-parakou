@@ -18,6 +18,7 @@ urlpatterns = [
     # Patient
     path('appointments', views.appointments_create),
     path('appointments/<int:pk>/cancel', views.appointment_cancel),
+    path('appointments/<int:pk>/confirmation-pdf', views.appointment_confirmation_pdf),
 
     # Specialist
     path('specialist/me', views.specialist_profile),

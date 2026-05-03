@@ -1,17 +1,38 @@
+import io
 import logging
+import os
 import re
 import threading
+import unicodedata
 from datetime import date
+from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction, IntegrityError
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import AccessToken
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import (
+    HRFlowable, Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
+)
 
 logger = logging.getLogger(__name__)
 
 _EMAIL_RE = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+_FR_MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin',
+              'Juillet','Août','Septembre','Octobre','Novembre','Décembre']
+
+def _fmt_date(d):
+    return f'{d.day:02d} {_FR_MONTHS[d.month - 1]} {d.year}'
+
+def _fmt_time(t):
+    return f'{t.hour:02d}h{t.minute:02d}'
 
 from .models import User, Commune, Village, Clinic, Specialist, AvailabilitySlot, Appointment
 
@@ -154,9 +175,9 @@ def appointments_create(request):
     d = request.data
     slot_id = d.get('slot_id')
     reason = (d.get('reason') or '').strip()
-    ctype = (d.get('consultation_type') or '').strip()
-    if not slot_id or not reason or not ctype:
+    if not slot_id or not reason:
         return JsonResponse({'error': 'Champs requis manquants'}, status=400)
+    ctype = ''
 
     user = request.user if request.user.is_authenticated else None
     if user and user.role not in ('patient',):
@@ -190,6 +211,170 @@ def appointments_create(request):
         )
     return JsonResponse({'id': apt.id, 'message': 'Demande envoyée.'})
 
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def appointment_confirmation_pdf(request, pk):
+    try:
+        apt = Appointment.objects.select_related(
+            'patient', 'slot',
+            'specialist__user',
+            'specialist__clinic__village__commune',
+        ).get(id=pk)
+    except Appointment.DoesNotExist:
+        return JsonResponse({'error': 'Rendez-vous introuvable'}, status=404)
+
+    patient_name = apt.get_patient_name()
+    patient_phone = apt.get_patient_phone() or '—'
+    patient_email = apt.get_patient_email() or '—'
+
+    slot = apt.slot
+    slot_date_str = _fmt_date(slot.slot_date)
+    start_time = _fmt_time(slot.start_time)
+    end_time = _fmt_time(slot.end_time)
+
+    specialist = apt.specialist
+    clinic = specialist.clinic
+    village = clinic.village
+    commune_name = village.commune.name if village.commune else '—'
+
+    submitted_at = apt.created_at
+    if timezone.is_aware(submitted_at):
+        submitted_at = timezone.localtime(submitted_at)
+    submitted_str = f'{_fmt_date(submitted_at)} à {_fmt_time(submitted_at)}'
+    ref = f'RDV-{submitted_at.year}-{apt.id:05d}'
+
+    # ── Build PDF ──────────────────────────────────────────────────────────────
+    buffer = io.BytesIO()
+    page_w = A4[0]
+    margin = 2 * cm
+    content_w = page_w - 2 * margin
+
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        rightMargin=margin, leftMargin=margin,
+        topMargin=margin, bottomMargin=2.5 * cm,
+        title=f'Confirmation RDV — {patient_name}',
+        author='RDV Parakou',
+    )
+
+    sky = colors.HexColor('#0369a1')
+    slate_dark = colors.HexColor('#1e293b')
+    slate_mid = colors.HexColor('#475569')
+    slate_light = colors.HexColor('#e2e8f0')
+    bg_row = colors.HexColor('#f8fafc')
+
+    styles = getSampleStyleSheet()
+    title_s = ParagraphStyle('PdfTitle', parent=styles['Normal'],
+        fontSize=20, fontName='Helvetica-Bold', textColor=sky,
+        spaceAfter=2, alignment=TA_CENTER)
+    sub_s = ParagraphStyle('PdfSub', parent=styles['Normal'],
+        fontSize=10, fontName='Helvetica', textColor=slate_mid,
+        spaceAfter=0, alignment=TA_CENTER)
+    section_s = ParagraphStyle('PdfSection', parent=styles['Normal'],
+        fontSize=11, fontName='Helvetica-Bold', textColor=sky,
+        spaceBefore=10, spaceAfter=4)
+    ref_s = ParagraphStyle('PdfRef', parent=styles['Normal'],
+        fontSize=10, fontName='Helvetica', textColor=slate_mid,
+        alignment=TA_CENTER)
+    footer_s = ParagraphStyle('PdfFooter', parent=styles['Normal'],
+        fontSize=9, fontName='Helvetica-Oblique', textColor=slate_mid,
+        alignment=TA_CENTER, spaceBefore=6)
+
+    cell_label = TableStyle([
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('TEXTCOLOR', (0, 0), (0, -1), sky),
+        ('TEXTCOLOR', (1, 0), (1, -1), slate_dark),
+        ('ROWBACKGROUNDS', (0, 0), (-1, -1), [bg_row, colors.white]),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, slate_light),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ])
+
+    elems = []
+
+    # Header: logo + title
+    logo_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.png')
+    if os.path.exists(logo_path):
+        logo_img = Image(logo_path, width=1.8 * cm, height=1.8 * cm)
+        title_para = Paragraph('RDV Parakou', title_s)
+        hdr = Table([[logo_img, title_para]], colWidths=[2.2 * cm, content_w - 2.2 * cm])
+        hdr.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (0, 0), 0),
+            ('RIGHTPADDING', (0, 0), (0, 0), 0),
+        ]))
+        elems.append(hdr)
+    else:
+        elems.append(Paragraph('RDV Parakou', title_s))
+
+    elems.append(Paragraph('Demande de rendez-vous', sub_s))
+    elems.append(Spacer(1, 0.25 * cm))
+    elems.append(HRFlowable(width='100%', thickness=2, color=sky, spaceAfter=4))
+
+    # Reference & date row
+    ref_tbl = Table([
+        [Paragraph(f'Référence : <b>{ref}</b>', ref_s),
+         Paragraph(f'Soumis le : {submitted_str}', ref_s)],
+    ], colWidths=[content_w / 2, content_w / 2])
+    elems.append(ref_tbl)
+
+    elems.append(Spacer(1, 0.3 * cm))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=slate_light, spaceAfter=2))
+
+    # Patient info
+    elems.append(Paragraph('Informations patient', section_s))
+    p_tbl = Table([
+        ['Nom', patient_name],
+        ['Téléphone', patient_phone],
+        ['Email', patient_email],
+    ], colWidths=[3.5 * cm, content_w - 3.5 * cm])
+    p_tbl.setStyle(cell_label)
+    elems.append(p_tbl)
+
+    # Appointment info
+    elems.append(Paragraph('Informations rendez-vous', section_s))
+    a_tbl = Table([
+        ['Commune', commune_name],
+        ['Village', village.name],
+        ['Clinique', clinic.name],
+        ['Spécialiste', f'{specialist.user.full_name} — {specialist.specialty}'],
+        ['Date souhaitée', slot_date_str],
+        ['Heure', f'de {start_time} à {end_time}'],
+        ['Motif', apt.reason],
+        *([['Type', apt.consultation_type]] if apt.consultation_type else []),
+    ], colWidths=[3.5 * cm, content_w - 3.5 * cm])
+    a_tbl.setStyle(cell_label)
+    elems.append(a_tbl)
+
+    # Footer
+    elems.append(Spacer(1, 0.5 * cm))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=slate_light, spaceAfter=2))
+    elems.append(Paragraph(
+        'Votre demande a été bien enregistrée.<br/>'
+        'Vous recevrez une confirmation par email après validation du spécialiste.<br/>'
+        '— L\'équipe RDV Parakou',
+        footer_s,
+    ))
+
+    doc.build(elems)
+    buffer.seek(0)
+
+    def _slug(s):
+        s = unicodedata.normalize('NFD', s)
+        s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+        return ''.join(c if c.isalnum() else '-' for c in s).strip('-')
+
+    filename = f'RDV-Parakou-{_slug(patient_name)}-{slot.slot_date.strftime("%Y-%m-%d")}.pdf'
+    response = HttpResponse(buffer.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 
 
 @api_view(['POST'])
